@@ -23,6 +23,30 @@ const SongDetail: React.FC<SongDetailProps> = ({
   if (!song) return null;
 
   const similarSongs = getSimilarSongs(song.id, 3);
+  
+  // Function to open Spotify app with the song
+  const openInSpotify = (url: string) => {
+    // Extract the Spotify track ID from the URL
+    const spotifyIdMatch = url.match(/track\/([a-zA-Z0-9]+)/);
+    const spotifyId = spotifyIdMatch ? spotifyIdMatch[1] : null;
+    
+    if (spotifyId) {
+      // Create a Spotify URI that will open in the app
+      const spotifyUri = `spotify:track:${spotifyId}`;
+      
+      // Try to open the Spotify app first
+      window.location.href = spotifyUri;
+      
+      // Fallback to the web URL after a short delay (in case app is not installed)
+      setTimeout(() => {
+        // Check if we're still on the same page (app didn't open)
+        window.open(url, "_blank");
+      }, 1000);
+    } else {
+      // If we can't extract the ID, just open the URL in browser
+      window.open(url, "_blank");
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -93,7 +117,7 @@ const SongDetail: React.FC<SongDetailProps> = ({
               {song.spotifyUrl && (
                 <Button
                   className="w-full mt-4 bg-[#1DB954] hover:bg-[#1DB954]/90 text-white gap-2"
-                  onClick={() => window.open(song.spotifyUrl, "_blank")}
+                  onClick={() => openInSpotify(song.spotifyUrl!)}
                 >
                   <Play className="h-4 w-4" fill="white" />
                   Play on Spotify
@@ -127,9 +151,19 @@ const SongDetail: React.FC<SongDetailProps> = ({
                             {similar.artist}
                           </p>
                         </div>
-                        <Button size="icon" variant="ghost" className="rounded-full">
-                          <Play className="h-4 w-4" />
-                        </Button>
+                        {similar.spotifyUrl && (
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="rounded-full"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openInSpotify(similar.spotifyUrl!);
+                            }}
+                          >
+                            <Play className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -150,3 +184,4 @@ const SongDetail: React.FC<SongDetailProps> = ({
 };
 
 export default SongDetail;
+
