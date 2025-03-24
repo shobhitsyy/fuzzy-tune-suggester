@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MoodSelector from "@/components/MoodSelector";
 import SongCard from "@/components/SongCard";
@@ -5,6 +6,7 @@ import SongDetail from "@/components/SongDetail";
 import { MoodParams, SongCategory, determineSongCategory } from "@/utils/fuzzyLogic";
 import { Song, getRecommendedSongs } from "@/utils/songData";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const Index = () => {
   const [moodParams, setMoodParams] = useState<MoodParams>({
@@ -21,21 +23,36 @@ const Index = () => {
   const [includeEnglish, setIncludeEnglish] = useState<boolean>(true);
   const [includeHindi, setIncludeHindi] = useState<boolean>(true);
   const [category, setCategory] = useState<SongCategory | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   
   // Generate recommendations based on mood parameters
   const generateRecommendations = () => {
-    const { category: newCategory } = determineSongCategory(moodParams);
-    setCategory(newCategory);
-    
-    const recommendations = getRecommendedSongs(
-      moodParams, 
-      8, 
-      includeEnglish, 
-      includeHindi
-    );
-    
-    setSongs(recommendations);
-    setShowResults(true);
+    setIsLoading(true);
+    try {
+      const { category: newCategory } = determineSongCategory(moodParams);
+      setCategory(newCategory);
+      
+      const recommendations = getRecommendedSongs(
+        moodParams, 
+        8, 
+        includeEnglish, 
+        includeHindi
+      );
+      
+      setSongs(recommendations);
+      setShowResults(true);
+      
+      if (recommendations.length === 0) {
+        toast.warning("No songs found matching your criteria. Try adjusting your preferences.");
+      } else {
+        toast.success(`Found ${recommendations.length} songs matching your mood!`);
+      }
+    } catch (error) {
+      console.error("Error generating recommendations:", error);
+      toast.error("Failed to generate recommendations. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   // Handle song selection
@@ -81,6 +98,30 @@ const Index = () => {
               onParametersChange={setMoodParams} 
               onSubmit={generateRecommendations} 
             />
+            
+            <div className="mt-6 flex items-center gap-4 justify-center">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="include-english"
+                  checked={includeEnglish}
+                  onChange={(e) => setIncludeEnglish(e.target.checked)}
+                  className="rounded text-primary focus:ring-primary"
+                />
+                <label htmlFor="include-english" className="text-sm">Include English Songs</label>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="include-hindi"
+                  checked={includeHindi}
+                  onChange={(e) => setIncludeHindi(e.target.checked)}
+                  className="rounded text-primary focus:ring-primary"
+                />
+                <label htmlFor="include-hindi" className="text-sm">Include Hindi Songs</label>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="space-y-8 animate-fade-in">
@@ -99,17 +140,33 @@ const Index = () => {
               </button>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {songs.map((song, index) => (
-                <div 
-                  key={song.id} 
-                  className="animate-slide-up" 
-                  style={{ animationDelay: `${index * 0.1}s` }}
+            {isLoading ? (
+              <div className="flex justify-center items-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            ) : songs.length === 0 ? (
+              <div className="text-center py-16">
+                <p className="text-lg text-muted-foreground">No songs found matching your criteria.</p>
+                <Button 
+                  onClick={handleBackToSelector}
+                  className="mt-4"
                 >
-                  <SongCard song={song} onClick={handleSongClick} />
-                </div>
-              ))}
-            </div>
+                  Adjust Your Preferences
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {songs.map((song, index) => (
+                  <div 
+                    key={song.id} 
+                    className="animate-slide-up" 
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <SongCard song={song} onClick={handleSongClick} />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </main>
