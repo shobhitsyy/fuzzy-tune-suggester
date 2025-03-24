@@ -1,5 +1,4 @@
-
-import { SongCategory } from './fuzzyLogic';
+import { SongCategory, determineSongCategory, MoodParams } from './fuzzyLogic';
 
 // Song data structure
 export interface Song {
@@ -372,12 +371,12 @@ export const getRandomSongsByCategory = (
 
 // Helper function to get recommendations based on fuzzy parameters
 export const getRecommendedSongs = (
-  params: import('./fuzzyLogic').MoodParams, 
+  params: MoodParams, 
   count: number = 5,
   includeEnglish: boolean = true,
   includeHindi: boolean = true
 ): Song[] => {
-  const { category, memberships } = import('./fuzzyLogic').determineSongCategory(params);
+  const { category, memberships } = determineSongCategory(params);
   
   let songs: Song[] = [];
   let languages: ('english' | 'hindi')[] = [];

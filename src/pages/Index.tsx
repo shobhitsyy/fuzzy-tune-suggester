@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import MoodSelector from "@/components/MoodSelector";
 import SongCard from "@/components/SongCard";
 import SongDetail from "@/components/SongDetail";
 import { MoodParams, SongCategory, determineSongCategory } from "@/utils/fuzzyLogic";
 import { Song, getRecommendedSongs } from "@/utils/songData";
-import { Button } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const [moodParams, setMoodParams] = useState<MoodParams>({
