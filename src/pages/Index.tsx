@@ -32,9 +32,10 @@ const Index = () => {
       const { category: newCategory } = determineSongCategory(moodParams);
       setCategory(newCategory);
       
+      // Increased count from 8 to 12 to show more songs
       const recommendations = getRecommendedSongs(
         moodParams, 
-        8, 
+        12, 
         includeEnglish, 
         includeHindi
       );
