@@ -9,11 +9,11 @@ export interface MoodParams {
 
 // Song genre/type categories
 export enum SongCategory {
-  CALM = "calm",
-  RELAXED = "relaxed",
-  MODERATE = "moderate",
-  UPBEAT = "upbeat",
-  ENERGETIC = "energetic"
+  CALM = "Calm",
+  RELAXED = "Relaxed",
+  MODERATE = "Moderate",
+  UPBEAT = "Upbeat",
+  ENERGETIC = "Energetic"
 }
 
 // Helper function to map time of day to a 0-1 scale with peaks for different times
