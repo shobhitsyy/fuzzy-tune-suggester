@@ -83,9 +83,9 @@ const MoodSelector: React.FC<MoodSelectorProps> = ({ onParametersChange, onSubmi
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Midnight</span>
-                <span>Evening</span>
-                <span>Noon</span>
                 <span>Morning</span>
+                <span>Noon</span>
+                <span>Evening</span>
               </div>
             </div>
 
