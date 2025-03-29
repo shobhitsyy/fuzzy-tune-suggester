@@ -4,16 +4,16 @@ export interface MoodParams {
   heartRate: number; // 0-100 (beats per minute normalized)
   timeOfDay: number; // 0-24 (hours)
   activity: number; // 0-10 (0 for resting, 10 for workout)
-  mood: number; // 0-10 (0 for calm, 10 for energetic)
+  mood: number; // 0-10 (0 for calm, 10 for Energetic)
 }
 
 // Song genre/type categories
 export enum SongCategory {
   CALM = "Calm",
   RELAXED = "Relaxed",
-  MODERATE = "Moderate",
-  UPBEAT = "Upbeat",
-  ENERGETIC = "Energetic"
+  Moderate = "Moderate",
+  Upbeat = "Upbeat",
+  Energetic = "Energetic"
 }
 
 // Helper function to map time of day to a 0-1 scale with peaks for different times
@@ -48,8 +48,8 @@ const relaxedMembership = (params: MoodParams): number => {
   return (heartRateFactor * 0.3 + activityFactor * 0.3 + moodFactor * 0.4);
 };
 
-// Calculate membership in the "moderate" category
-const moderateMembership = (params: MoodParams): number => {
+// Calculate membership in the "Moderate" category
+const ModerateMembership = (params: MoodParams): number => {
   const heartRateFactor = Math.max(0, 1 - Math.abs(params.heartRate - 80) / 20);
   const activityFactor = Math.max(0, 1 - Math.abs(params.activity - 5) / 3);
   const moodFactor = Math.max(0, 1 - Math.abs(params.mood - 5) / 3);
@@ -57,8 +57,8 @@ const moderateMembership = (params: MoodParams): number => {
   return (heartRateFactor * 0.3 + activityFactor * 0.3 + moodFactor * 0.4);
 };
 
-// Calculate membership in the "upbeat" category
-const upbeatMembership = (params: MoodParams): number => {
+// Calculate membership in the "Upbeat" category
+const UpbeatMembership = (params: MoodParams): number => {
   const heartRateFactor = Math.max(0, 1 - Math.abs(params.heartRate - 90) / 20);
   const activityFactor = Math.max(0, 1 - Math.abs(params.activity - 7) / 3);
   const moodFactor = Math.max(0, 1 - Math.abs(params.mood - 7) / 3);
@@ -66,8 +66,8 @@ const upbeatMembership = (params: MoodParams): number => {
   return (heartRateFactor * 0.3 + activityFactor * 0.3 + moodFactor * 0.4);
 };
 
-// Calculate membership in the "energetic" category
-const energeticMembership = (params: MoodParams): number => {
+// Calculate membership in the "Energetic" category
+const EnergeticMembership = (params: MoodParams): number => {
   const heartRateFactor = Math.min(1, Math.max(0, (params.heartRate - 85) / 25));
   const activityFactor = Math.min(1, Math.max(0, (params.activity - 7) / 3));
   const moodFactor = Math.min(1, Math.max(0, (params.mood - 7) / 3));
@@ -87,13 +87,13 @@ export const determineSongCategory = (params: MoodParams): {
   const memberships = {
     [SongCategory.CALM]: calmMembership(params) * (params.timeOfDay >= 20 || params.timeOfDay <= 7 ? 1.2 : 1),
     [SongCategory.RELAXED]: relaxedMembership(params),
-    [SongCategory.MODERATE]: moderateMembership(params),
-    [SongCategory.UPBEAT]: upbeatMembership(params) * (params.timeOfDay >= 8 && params.timeOfDay <= 20 ? 1.2 : 1),
-    [SongCategory.ENERGETIC]: energeticMembership(params) * (params.timeOfDay >= 10 && params.timeOfDay <= 18 ? 1.2 : 1)
+    [SongCategory.Moderate]: ModerateMembership(params),
+    [SongCategory.Upbeat]: UpbeatMembership(params) * (params.timeOfDay >= 8 && params.timeOfDay <= 20 ? 1.2 : 1),
+    [SongCategory.Energetic]: EnergeticMembership(params) * (params.timeOfDay >= 10 && params.timeOfDay <= 18 ? 1.2 : 1)
   };
   
   // Find category with highest membership
-  let maxCategory = SongCategory.MODERATE;
+  let maxCategory = SongCategory.Moderate;
   let maxValue = 0;
   
   Object.entries(memberships).forEach(([category, value]) => {
