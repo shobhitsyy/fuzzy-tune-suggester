@@ -8,8 +8,7 @@ import { MoodParams, determineSongCategory, Song } from '@/utils/fuzzyLogic';
 import { 
   populateDatabase, 
   isDatabasePopulated, 
-  getRecommendedSongs,
-  getSimilarSongs 
+  getRecommendedSongs
 } from '@/services/songService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -102,19 +101,12 @@ const Index = () => {
     }
   }, [moodParams, includeEnglish, includeHindi, isInitializing]);
 
-  const handleSongSelect = async (song: Song) => {
-    try {
-      // Get similar songs for the selected song
-      const similarSongs = await getSimilarSongs(song.id, 3);
-      const songWithSimilar = {
-        ...song,
-        similarSongs: similarSongs.map(s => s.id)
-      };
-      setSelectedSong(songWithSimilar);
-    } catch (error) {
-      console.error('Error fetching similar songs:', error);
-      setSelectedSong(song);
-    }
+  const handleSongSelect = (song: Song) => {
+    setSelectedSong(song);
+  };
+
+  const handleSimilarSongSelect = (song: Song) => {
+    setSelectedSong(song);
   };
 
   const { category } = determineSongCategory(moodParams);
@@ -209,9 +201,7 @@ const Index = () => {
             song={selectedSong}
             isOpen={!!selectedSong}
             onClose={() => setSelectedSong(null)}
-            similarSongs={recommendedSongs.filter(s => 
-              selectedSong.similarSongs?.includes(s.id)
-            )}
+            onSelectSimilar={handleSimilarSongSelect}
           />
         )}
       </div>

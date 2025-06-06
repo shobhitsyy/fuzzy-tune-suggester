@@ -1,6 +1,7 @@
 
-import React from "react";
-import { Song, getSimilarSongs } from "@/utils/songData";
+import React, { useState, useEffect } from "react";
+import { Song } from "@/utils/fuzzyLogic";
+import { getSimilarSongs } from "@/services/songService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,9 +21,35 @@ const SongDetail: React.FC<SongDetailProps> = ({
   onClose,
   onSelectSimilar,
 }) => {
-  if (!song) return null;
+  const [similarSongs, setSimilarSongs] = useState<Song[]>([]);
+  const [isLoadingSimilar, setIsLoadingSimilar] = useState(false);
 
-  const similarSongs = getSimilarSongs(song.id, 3);
+  // Fetch similar songs when song changes
+  useEffect(() => {
+    const fetchSimilarSongs = async () => {
+      if (!song) {
+        setSimilarSongs([]);
+        return;
+      }
+
+      setIsLoadingSimilar(true);
+      try {
+        const similar = await getSimilarSongs(song.id, 3);
+        setSimilarSongs(similar);
+      } catch (error) {
+        console.error('Error fetching similar songs:', error);
+        setSimilarSongs([]);
+      } finally {
+        setIsLoadingSimilar(false);
+      }
+    };
+
+    if (isOpen && song) {
+      fetchSimilarSongs();
+    }
+  }, [song, isOpen]);
+
+  if (!song) return null;
   
   // Function to open Spotify app with the song
   const openInSpotify = (url: string) => {
@@ -130,9 +157,21 @@ const SongDetail: React.FC<SongDetailProps> = ({
                 {song.description}
               </DialogDescription>
 
-              {similarSongs.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="font-medium mb-3">Similar Songs</h4>
+              <div className="mt-6">
+                <h4 className="font-medium mb-3">Similar Songs</h4>
+                {isLoadingSimilar ? (
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="animate-pulse flex items-center gap-3 p-2">
+                        <div className="w-12 h-12 rounded-md bg-gray-200"></div>
+                        <div className="flex-1">
+                          <div className="h-4 bg-gray-200 rounded mb-1"></div>
+                          <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : similarSongs.length > 0 ? (
                   <div className="space-y-3">
                     {similarSongs.map((similar) => (
                       <div
@@ -167,8 +206,10 @@ const SongDetail: React.FC<SongDetailProps> = ({
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <p className="text-sm text-muted-foreground">No similar songs found.</p>
+                )}
+              </div>
             </div>
           </div>
         </ScrollArea>
@@ -184,4 +225,3 @@ const SongDetail: React.FC<SongDetailProps> = ({
 };
 
 export default SongDetail;
-
