@@ -1,18 +1,17 @@
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import MoodSelector from '@/components/MoodSelector';
-import SongCard from '@/components/SongCard';
-import SongDetail from '@/components/SongDetail';
 import { Button } from '@/components/ui/button';
-import { MoodParams, determineSongCategory, Song } from '@/utils/fuzzyLogic';
+import { MoodParams, determineSongCategory } from '@/utils/fuzzyLogic';
 import { 
   populateDatabase, 
-  isDatabasePopulated, 
-  getRecommendedSongs
+  isDatabasePopulated
 } from '@/services/songService';
 import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
+  const navigate = useNavigate();
   const [moodParams, setMoodParams] = useState<MoodParams>({
     heartRate: 75,
     timeOfDay: new Date().getHours(),
@@ -20,11 +19,8 @@ const Index = () => {
     mood: 5
   });
 
-  const [recommendedSongs, setRecommendedSongs] = useState<Song[]>([]);
-  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [includeEnglish, setIncludeEnglish] = useState(true);
   const [includeHindi, setIncludeHindi] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [initializationError, setInitializationError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -53,11 +49,6 @@ const Index = () => {
           console.log('Database already populated');
         }
         
-        // Get initial recommendations
-        console.log('Getting initial recommendations...');
-        await getRecommendations();
-        console.log('Initial recommendations loaded');
-        
       } catch (error) {
         console.error('Error initializing database:', error);
         setInitializationError('Failed to initialize the music database. Please refresh the page to try again.');
@@ -72,65 +63,29 @@ const Index = () => {
     };
 
     initializeDatabase();
-  }, []);
+  }, [toast]);
 
-  const getRecommendations = async () => {
+  const handleGetRecommendations = () => {
     if (!includeEnglish && !includeHindi) {
-      console.log('No languages selected, clearing recommendations');
-      setRecommendedSongs([]);
+      toast({
+        title: "Language Required",
+        description: "Please select at least one language to get recommendations.",
+        variant: "destructive",
+      });
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const { category, memberships } = determineSongCategory(moodParams);
-      console.log('Determined category:', category, 'Memberships:', memberships);
-      
-      const songs = await getRecommendedSongs(
-        category,
-        memberships,
-        6,
+    const { category } = determineSongCategory(moodParams);
+    console.log('Getting recommendations for category:', category);
+    
+    // Navigate to recommendations page with mood parameters
+    navigate('/recommendations', {
+      state: {
+        moodParams,
         includeEnglish,
         includeHindi
-      );
-      
-      console.log('Fetched songs:', songs.length);
-      setRecommendedSongs(songs);
-      
-      if (songs.length === 0) {
-        toast({
-          title: "No Songs Found",
-          description: "No songs match your current preferences. Try adjusting your mood settings or language preferences.",
-        });
       }
-    } catch (error) {
-      console.error('Error getting recommendations:', error);
-      toast({
-        title: "Error",
-        description: "Failed to get song recommendations. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Update recommendations when mood params or language preferences change
-  useEffect(() => {
-    if (!isInitializing && !initializationError) {
-      console.log('Mood params or language preferences changed, updating recommendations');
-      getRecommendations();
-    }
-  }, [moodParams, includeEnglish, includeHindi, isInitializing, initializationError]);
-
-  const handleSongSelect = (song: Song) => {
-    console.log('Song selected:', song.title);
-    setSelectedSong(song);
-  };
-
-  const handleSimilarSongSelect = (song: Song) => {
-    console.log('Similar song selected:', song.title);
-    setSelectedSong(song);
+    });
   };
 
   const { category } = determineSongCategory(moodParams);
@@ -174,7 +129,7 @@ const Index = () => {
             🎵 Music Mood Generator
           </h1>
           <p className="text-lg text-gray-600">
-            Discover music that matches your current vibe using AI-powered recommendations
+            Set your mood parameters and discover music that matches your current vibe
           </p>
         </div>
 
@@ -191,63 +146,29 @@ const Index = () => {
             }}
           />
 
-          <div className="mt-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold text-gray-800">
-                Recommended for you: <span className="text-purple-600">{category}</span> vibes
+          <div className="mt-8 text-center">
+            <div className="mb-6">
+              <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+                Ready for <span className="text-purple-600">{category}</span> vibes?
               </h2>
-              <Button 
-                onClick={getRecommendations}
-                disabled={isLoading}
-                variant="outline"
-              >
-                {isLoading ? 'Loading...' : 'Refresh'}
-              </Button>
+              <p className="text-gray-600">
+                Click below to discover songs perfectly matched to your current mood
+              </p>
             </div>
 
-            {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="animate-pulse">
-                    <div className="bg-white rounded-lg shadow-md p-6">
-                      <div className="h-4 bg-gray-200 rounded mb-4"></div>
-                      <div className="h-3 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : recommendedSongs.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {recommendedSongs.map((song) => (
-                  <SongCard
-                    key={song.id}
-                    song={song}
-                    onClick={() => handleSongSelect(song)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">
-                  {!includeEnglish && !includeHindi 
-                    ? "Please select at least one language to see recommendations."
-                    : "No songs found for your current mood. Try adjusting your preferences!"
-                  }
-                </p>
-              </div>
-            )}
+            <Button 
+              onClick={handleGetRecommendations}
+              size="lg"
+              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            >
+              Get My Recommendations 🎵
+            </Button>
+
+            <div className="mt-4 text-sm text-gray-500">
+              Languages: {includeEnglish && includeHindi ? 'English & Hindi' : includeEnglish ? 'English' : includeHindi ? 'Hindi' : 'None selected'}
+            </div>
           </div>
         </div>
-
-        {selectedSong && (
-          <SongDetail
-            song={selectedSong}
-            isOpen={!!selectedSong}
-            onClose={() => setSelectedSong(null)}
-            onSelectSimilar={handleSimilarSongSelect}
-          />
-        )}
       </div>
     </div>
   );

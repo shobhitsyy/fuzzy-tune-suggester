@@ -603,7 +603,7 @@ export const songDatabase: Song[] = [
     spotifyUrl: 'https://open.spotify.com/track/1VhD0UtTytVMNYXWARtAuC',
     similarSongs: ['hi-Upbeat-2', 'hi-Upbeat-4'],
     tags: ['bollywood', 'holi', 'celebration'],
-    description: 'A festive Holi song with a contagious energy and playful vocal exchanges between Vishal Dadlani and Shalmali Kholgade. The dhol beats and vibrant instrumentation capture the joyful spirit of the festival.'
+    description: 'A festive Holi song with a contagious energy and playful vocal exchanges between Vishal Dadlani and Shalmal Kholgade. The dhol beats and vibrant instrumentation capture the joyful spirit of the festival.'
   },
   {
     id: 'hi-Upbeat-4',
@@ -788,6 +788,356 @@ export const songDatabase: Song[] = [
     similarSongs: ['hi-Energetic-3', 'hi-Energetic-1'],
     tags: ['sports', 'patriotic', 'inspirational'],
     description: 'The iconic title track from the sports drama film, featuring Sukhwinder Singh\'s powerful vocals and a rousing arrangement. The song has become an unofficial sports anthem in India with its motivational message.'
+  },
+
+  // ADDITIONAL CALM - English Songs
+  {
+    id: 'en-calm-6',
+    title: 'Mad World',
+    artist: 'Gary Jules',
+    album: 'Trading Snakeoil for Wolftickets',
+    releaseDate: '2001-05-01',
+    language: 'English',
+    category: SongCategory.CALM,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b273e2e352d89826aef6dbd5ff8f',
+    duration: '3:07',
+    spotifyUrl: 'https://open.spotify.com/track/3JOVTQ5h8HGFnDdp4VT3MP',
+    similarSongs: ['en-calm-1', 'en-calm-2'],
+    tags: ['melancholic', 'acoustic', 'cover'],
+    description: 'A haunting acoustic cover that transforms the original Tears for Fears track into a deeply introspective piece about isolation and observation.'
+  },
+  {
+    id: 'en-calm-7',
+    title: 'The Night We Met',
+    artist: 'Lord Huron',
+    album: 'Strange Trails',
+    releaseDate: '2015-04-07',
+    language: 'English',
+    category: SongCategory.CALM,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b27317875a0610c23d8946454583',
+    duration: '3:28',
+    spotifyUrl: 'https://open.spotify.com/track/3hRV0jL3vUpRrcy398teAU',
+    similarSongs: ['en-calm-3', 'en-relaxed-5'],
+    tags: ['indie folk', 'nostalgic', 'romantic'],
+    description: 'A wistful ballad that captures the pain of lost love and the desire to return to better times, with gentle acoustic guitar and ethereal vocals.'
+  },
+  {
+    id: 'en-calm-8',
+    title: 'Breathe',
+    artist: 'Télépopmusik',
+    album: 'Genetic World',
+    releaseDate: '2001-09-18',
+    language: 'English',
+    category: SongCategory.CALM,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b273d32123b75d64e15ceaca8b08',
+    duration: '4:22',
+    spotifyUrl: 'https://open.spotify.com/track/1n6cpWo9ant4WguEo91KZh',
+    similarSongs: ['en-calm-1', 'en-calm-4'],
+    tags: ['electronic', 'chillout', 'ambient'],
+    description: 'An ambient electronic piece with soothing vocals and gentle beats that creates a meditative atmosphere perfect for relaxation.'
+  },
+
+  // ADDITIONAL CALM - Hindi Songs
+  {
+    id: 'hi-calm-6',
+    title: 'Raabta',
+    artist: 'Arijit Singh',
+    album: 'Agent Vinod',
+    releaseDate: '2012-03-23',
+    language: 'Hindi',
+    category: SongCategory.CALM,
+    coverImage: 'https://c.saavncdn.com/216/Agent-Vinod-Hindi-2012-20190607040631-500x500.jpg',
+    duration: '4:05',
+    spotifyUrl: 'https://open.spotify.com/track/5eFQZWnBFbfLunlSJfwRjl',
+    similarSongs: ['hi-calm-1', 'hi-calm-3'],
+    tags: ['bollywood', 'romantic', 'soulful'],
+    description: 'A deeply emotional song about soul connections, featuring Arijit Singh\'s expressive vocals over minimal instrumentation.'
+  },
+  {
+    id: 'hi-calm-7',
+    title: 'Shayad',
+    artist: 'Arijit Singh',
+    album: 'Love Aaj Kal',
+    releaseDate: '2020-02-14',
+    language: 'Hindi',
+    category: SongCategory.CALM,
+    coverImage: 'https://c.saavncdn.com/191/Love-Aaj-Kal-Hindi-2020-20200214040807-500x500.jpg',
+    duration: '3:18',
+    spotifyUrl: 'https://open.spotify.com/track/2FQaSRPOsKPeBAAv1HS5nD',
+    similarSongs: ['hi-calm-1', 'hi-calm-6'],
+    tags: ['bollywood', 'melancholic', 'piano'],
+    description: 'A tender ballad about uncertainty in love, with delicate piano arrangements and Arijit Singh\'s vulnerable vocal delivery.'
+  },
+
+  // ADDITIONAL RELAXED - English Songs
+  {
+    id: 'en-relaxed-6',
+    title: 'Vienna',
+    artist: 'Billy Joel',
+    album: 'The Stranger',
+    releaseDate: '1977-09-29',
+    language: 'English',
+    category: SongCategory.RELAXED,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b2734ae1c4c5c45aabe565499163',
+    duration: '3:34',
+    spotifyUrl: 'https://open.spotify.com/track/3T9UKU3p0TUECcwABgUvsj',
+    similarSongs: ['en-relaxed-1', 'en-relaxed-3'],
+    tags: ['classic rock', 'piano', 'wisdom'],
+    description: 'A thoughtful piano-driven song about taking time to appreciate life, with Billy Joel\'s storytelling over a gentle melody.'
+  },
+  {
+    id: 'en-relaxed-7',
+    title: 'Black',
+    artist: 'Pearl Jam',
+    album: 'Ten',
+    releaseDate: '1991-08-27',
+    language: 'English',
+    category: SongCategory.RELAXED,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b273747aa4e2ee18bb66f5b63c54',
+    duration: '5:43',
+    spotifyUrl: 'https://open.spotify.com/track/4qbCRlvE5Bb9XNBjQgWrpU',
+    similarSongs: ['en-relaxed-4', 'en-relaxed-5'],
+    tags: ['grunge', 'emotional', 'guitar'],
+    description: 'An emotionally powerful ballad with Eddie Vedder\'s passionate vocals and beautiful guitar work, building from quiet verses to soaring choruses.'
+  },
+  {
+    id: 'en-relaxed-8',
+    title: 'The Sound of Silence',
+    artist: 'Disturbed',
+    album: 'Immortalized',
+    releaseDate: '2015-08-21',
+    language: 'English',
+    category: SongCategory.RELAXED,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b273b5c20bf546c61c49db9dcb80',
+    duration: '4:08',
+    spotifyUrl: 'https://open.spotify.com/track/2LTlO3NuNVN7jTleR66hVD',
+    similarSongs: ['en-relaxed-6', 'en-relaxed-7'],
+    tags: ['cover', 'orchestral', 'powerful'],
+    description: 'A dramatic orchestral cover of Simon & Garfunkel\'s classic, featuring David Draiman\'s powerful vocals building to an epic climax.'
+  },
+
+  // ADDITIONAL RELAXED - Hindi Songs
+  {
+    id: 'hi-relaxed-6',
+    title: 'Hamari Adhuri Kahani',
+    artist: 'Arijit Singh',
+    album: 'Hamari Adhuri Kahani',
+    releaseDate: '2015-06-12',
+    language: 'Hindi',
+    category: SongCategory.RELAXED,
+    coverImage: 'https://c.saavncdn.com/364/Hamari-Adhuri-Kahani-Hindi-2015-500x500.jpg',
+    duration: '5:08',
+    spotifyUrl: 'https://open.spotify.com/track/3tmd33VoNlA6N4KKDaE7IT',
+    similarSongs: ['hi-relaxed-1', 'hi-relaxed-4'],
+    tags: ['bollywood', 'romantic', 'emotional'],
+    description: 'A heart-wrenching ballad about incomplete love stories, featuring Arijit Singh\'s emotional vocals with orchestral arrangements.'
+  },
+  {
+    id: 'hi-relaxed-7',
+    title: 'Khamoshiyan',
+    artist: 'Arijit Singh',
+    album: 'Khamoshiyan',
+    releaseDate: '2015-01-30',
+    language: 'Hindi',
+    category: SongCategory.RELAXED,
+    coverImage: 'https://c.saavncdn.com/364/Khamoshiyan-Hindi-2015-500x500.jpg',
+    duration: '4:39',
+    spotifyUrl: 'https://open.spotify.com/track/3UKxJNB3jvX9xFGNUU9MlG',
+    similarSongs: ['hi-relaxed-5', 'hi-relaxed-6'],
+    tags: ['bollywood', 'mysterious', 'haunting'],
+    description: 'A haunting melody about unspoken words and silent conversations, with atmospheric production and evocative vocals.'
+  },
+
+  // ADDITIONAL MODERATE - English Songs
+  {
+    id: 'en-Moderate-6',
+    title: 'I Can\'t Feel My Face',
+    artist: 'The Weeknd',
+    album: 'Beauty Behind the Madness',
+    releaseDate: '2015-06-08',
+    language: 'English',
+    category: SongCategory.Moderate,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b273ad6d71c3b62b744b8bfea73b',
+    duration: '3:35',
+    spotifyUrl: 'https://open.spotify.com/track/1xYnR5UKGQzYaQsNChEPnI',
+    similarSongs: ['en-Moderate-4', 'en-Moderate-2'],
+    tags: ['pop', 'retro', 'danceable'],
+    description: 'A Michael Jackson-inspired pop anthem with infectious grooves and The Weeknd\'s smooth vocals, perfect for moderate energy activities.'
+  },
+  {
+    id: 'en-Moderate-7',
+    title: 'Pumped Up Kicks',
+    artist: 'Foster the People',
+    album: 'Torches',
+    releaseDate: '2010-09-14',
+    language: 'English',
+    category: SongCategory.Moderate,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b273c5d0a502b388b2ba1afe4cd4',
+    duration: '3:59',
+    spotifyUrl: 'https://open.spotify.com/track/7w87IxuO7BDcJ3YUqCyMTT',
+    similarSongs: ['en-Moderate-3', 'en-Moderate-6'],
+    tags: ['indie pop', 'synth', 'catchy'],
+    description: 'An indie pop track with a catchy whistle melody and driving beat, combining upbeat music with thoughtful lyrics.'
+  },
+
+  // ADDITIONAL MODERATE - Hindi Songs
+  {
+    id: 'hi-Moderate-6',
+    title: 'Galliyan',
+    artist: 'Ankit Tiwari',
+    album: 'Ek Villain',
+    releaseDate: '2014-06-27',
+    language: 'Hindi',
+    category: SongCategory.Moderate,
+    coverImage: 'https://c.saavncdn.com/314/Ek-Villain-Hindi-2014-500x500.jpg',
+    duration: '4:18',
+    spotifyUrl: 'https://open.spotify.com/track/2QRX3LvnkE1XMWs2C4LYSl',
+    similarSongs: ['hi-Moderate-1', 'hi-Moderate-4'],
+    tags: ['bollywood', 'romantic', 'guitar'],
+    description: 'A guitar-driven romantic ballad with Ankit Tiwari\'s soulful vocals, blending acoustic elements with modern production.'
+  },
+  {
+    id: 'hi-Moderate-7',
+    title: 'Sanam Re',
+    artist: 'Arijit Singh',
+    album: 'Sanam Re',
+    releaseDate: '2016-02-12',
+    language: 'Hindi',
+    category: SongCategory.Moderate,
+    coverImage: 'https://c.saavncdn.com/852/Sanam-Re-Hindi-2016-500x500.jpg',
+    duration: '3:57',
+    spotifyUrl: 'https://open.spotify.com/track/5ZnXUeRIv0u1noPQ2OhQfh',
+    similarSongs: ['hi-Moderate-1', 'hi-Moderate-6'],
+    tags: ['bollywood', 'melodic', 'emotional'],
+    description: 'A melodious love song with beautiful orchestration and Arijit Singh\'s expressive vocals, perfect for moderate mood settings.'
+  },
+
+  // ADDITIONAL UPBEAT - English Songs
+  {
+    id: 'en-Upbeat-6',
+    title: 'Happy',
+    artist: 'Pharrell Williams',
+    album: 'Girl',
+    releaseDate: '2013-11-21',
+    language: 'English',
+    category: SongCategory.Upbeat,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b273d6f496f5a6e5a79f00f61949',
+    duration: '3:53',
+    spotifyUrl: 'https://open.spotify.com/track/60nZcImufyMA1MKQY3dcCH',
+    similarSongs: ['en-Upbeat-1', 'en-Upbeat-5'],
+    tags: ['pop', 'funk', 'feel-good'],
+    description: 'An infectious feel-good anthem with funk influences and Pharrell\'s joyful vocals, guaranteed to lift spirits and get people moving.'
+  },
+  {
+    id: 'en-Upbeat-7',
+    title: 'Walking on Sunshine',
+    artist: 'Katrina and the Waves',
+    album: 'Walking on Sunshine',
+    releaseDate: '1985-04-01',
+    language: 'English',
+    category: SongCategory.Upbeat,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b273a14b08b9a6616e121df5e8b0',
+    duration: '3:58',
+    spotifyUrl: 'https://open.spotify.com/track/05wIrZSwuaVWhcv5FfqeH0',
+    similarSongs: ['en-Upbeat-5', 'en-Upbeat-6'],
+    tags: ['pop rock', 'energetic', 'celebration'],
+    description: 'A classic upbeat anthem with bright guitars and powerful vocals that radiates pure joy and positive energy.'
+  },
+
+  // ADDITIONAL UPBEAT - Hindi Songs
+  {
+    id: 'hi-Upbeat-6',
+    title: 'Nachde Ne Saare',
+    artist: 'Jasleen Royal, Siddharth Mahadevan',
+    album: 'Baar Baar Dekho',
+    releaseDate: '2016-08-26',
+    language: 'Hindi',
+    category: SongCategory.Upbeat,
+    coverImage: 'https://c.saavncdn.com/787/Baar-Baar-Dekho-Hindi-2016-500x500.jpg',
+    duration: '4:02',
+    spotifyUrl: 'https://open.spotify.com/track/4xPPWCqnCGXQJO6lNNkZqb',
+    similarSongs: ['hi-Upbeat-2', 'hi-Upbeat-4'],
+    tags: ['bollywood', 'dance', 'wedding'],
+    description: 'A vibrant wedding song with folk elements and energetic vocals, perfect for celebrations and dance floors.'
+  },
+  {
+    id: 'hi-Upbeat-7',
+    title: 'Nagada Sang Dhol',
+    artist: 'Shreya Ghoshal, Osman Mir',
+    album: 'Goliyon Ki Raasleela Ram-Leela',
+    releaseDate: '2013-11-15',
+    language: 'Hindi',
+    category: SongCategory.Upbeat,
+    coverImage: 'https://c.saavncdn.com/195/Goliyon-Ki-Raasleela-Ram-Leela-Hindi-2013-500x500.jpg',
+    duration: '5:21',
+    spotifyUrl: 'https://open.spotify.com/track/6UtECNffcH3JhRa3d9jZb4',
+    similarSongs: ['hi-Upbeat-3', 'hi-Upbeat-6'],
+    tags: ['bollywood', 'traditional', 'dance'],
+    description: 'A high-energy traditional dance number with powerful percussion, folk instruments, and dynamic vocals celebrating festivities.'
+  },
+
+  // ADDITIONAL ENERGETIC - English Songs
+  {
+    id: 'en-Energetic-6',
+    title: 'Thunder',
+    artist: 'Imagine Dragons',
+    album: 'Evolve',
+    releaseDate: '2017-06-23',
+    language: 'English',
+    category: SongCategory.Energetic,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b273cd2caf0e15b476aa0e5d3e71',
+    duration: '3:07',
+    spotifyUrl: 'https://open.spotify.com/track/1zB4vmk8tFRmM9UULNzbLB',
+    similarSongs: ['en-Energetic-4', 'en-Energetic-5'],
+    tags: ['pop rock', 'anthemic', 'motivational'],
+    description: 'An anthemic rock track with pounding drums and powerful vocals about overcoming obstacles and finding your voice.'
+  },
+  {
+    id: 'en-Energetic-7',
+    title: 'Pumped Up Kicks',
+    artist: 'Foster the People',
+    album: 'Torches',
+    releaseDate: '2010-09-14',
+    language: 'English',
+    category: SongCategory.Energetic,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b273c5d0a502b388b2ba1afe4cd4',
+    duration: '3:59',
+    spotifyUrl: 'https://open.spotify.com/track/7w87IxuO7BDcJ3YUqCyMTT',
+    similarSongs: ['en-Energetic-6', 'en-Energetic-2'],
+    tags: ['indie pop', 'high energy', 'workout'],
+    description: 'A high-energy indie pop track with driving beats and an infectious melody that builds intensity throughout.'
+  },
+
+  // ADDITIONAL ENERGETIC - Hindi Songs
+  {
+    id: 'hi-Energetic-6',
+    title: 'Jai Ho',
+    artist: 'A.R. Rahman, Sukhwinder Singh',
+    album: 'Slumdog Millionaire',
+    releaseDate: '2008-11-25',
+    language: 'Hindi',
+    category: SongCategory.Energetic,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b273a6f995fb0f2e4b79c4a8c80c',
+    duration: '5:09',
+    spotifyUrl: 'https://open.spotify.com/track/0E0abGAhE5WJZyNKqHwMSe',
+    similarSongs: ['hi-Energetic-1', 'hi-Energetic-5'],
+    tags: ['oscar winner', 'celebration', 'victory'],
+    description: 'The Oscar-winning anthem with explosive energy, featuring A.R. Rahman\'s powerful composition and Sukhwinder Singh\'s dynamic vocals.'
+  },
+  {
+    id: 'hi-Energetic-7',
+    title: 'Tattad Tattad',
+    artist: 'Arijit Singh, Sanjay Leela Bhansali',
+    album: 'Goliyon Ki Raasleela Ram-Leela',
+    releaseDate: '2013-11-15',
+    language: 'Hindi',
+    category: SongCategory.Energetic,
+    coverImage: 'https://c.saavncdn.com/195/Goliyon-Ki-Raasleela-Ram-Leela-Hindi-2013-500x500.jpg',
+    duration: '4:52',
+    spotifyUrl: 'https://open.spotify.com/track/5YkYyEP2s3KXFOhaqzjXZo',
+    similarSongs: ['hi-Energetic-2', 'hi-Energetic-6'],
+    tags: ['bollywood', 'intense', 'percussion'],
+    description: 'An intense, percussion-heavy track with powerful vocals and traditional instruments creating an explosive, high-energy experience.'
   }
 ];
 
