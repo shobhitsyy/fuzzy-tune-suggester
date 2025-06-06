@@ -9,7 +9,93 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      song_similarities: {
+        Row: {
+          created_at: string | null
+          id: string
+          similar_song_id: string | null
+          song_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          similar_song_id?: string | null
+          song_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          similar_song_id?: string | null
+          song_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "song_similarities_similar_song_id_fkey"
+            columns: ["similar_song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "song_similarities_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      songs: {
+        Row: {
+          album: string
+          artist: string
+          category: string
+          cover_image: string | null
+          created_at: string | null
+          description: string | null
+          duration: string
+          id: string
+          language: string
+          release_date: string
+          spotify_url: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          album: string
+          artist: string
+          category: string
+          cover_image?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration: string
+          id: string
+          language: string
+          release_date: string
+          spotify_url?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          album?: string
+          artist?: string
+          category?: string
+          cover_image?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration?: string
+          id?: string
+          language?: string
+          release_date?: string
+          spotify_url?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

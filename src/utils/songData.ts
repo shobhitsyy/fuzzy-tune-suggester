@@ -1,4 +1,3 @@
-
 import { SongCategory, determineSongCategory, MoodParams } from './fuzzyLogic';
 
 // Song data structure
@@ -18,7 +17,8 @@ export interface Song {
   description: string;
 }
 
-// Sample song database
+// Note: This data is now stored in Supabase database
+// This export is kept for initial database population
 export const songDatabase: Song[] = [
   // CALM - English Songs
   {
@@ -791,76 +791,34 @@ export const songDatabase: Song[] = [
   }
 ];
 
-// Helper function to get songs by category
-export const getSongsByCategory = (category: SongCategory, language?: 'English' | 'Hindi'): Song[] => {
-  if (language) {
-    return songDatabase.filter(song => song.category === category && song.language === language);
-  }
-  return songDatabase.filter(song => song.category === category);
+// Legacy functions - these now use the database service
+export const getSongsByCategory = async (category: SongCategory, language?: 'English' | 'Hindi'): Promise<Song[]> => {
+  // Import here to avoid circular dependency
+  const { getSongsByCategory: dbGetSongsByCategory } = await import('@/services/songService');
+  return dbGetSongsByCategory(category, language);
 };
 
-// Helper function to get similar songs
-export const getSimilarSongs = (songId: string, limit: number = 3): Song[] => {
-  const song = songDatabase.find(s => s.id === songId);
-  if (!song || !song.similarSongs) return [];
-  
-  return song.similarSongs
-    .map(id => songDatabase.find(s => s.id === id))
-    .filter(Boolean) as Song[];
+export const getSimilarSongs = async (songId: string, limit: number = 3): Promise<Song[]> => {
+  const { getSimilarSongs: dbGetSimilarSongs } = await import('@/services/songService');
+  return dbGetSimilarSongs(songId, limit);
 };
 
-// Helper function to get random songs from a category
-export const getRandomSongsByCategory = (
+export const getRandomSongsByCategory = async (
   category: SongCategory, 
   count: number = 3, 
   language?: 'English' | 'Hindi'
-): Song[] => {
-  const songs = getSongsByCategory(category, language);
-  const shuffled = [...songs].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, count);
+): Promise<Song[]> => {
+  const { getRandomSongsByCategory: dbGetRandomSongsByCategory } = await import('@/services/songService');
+  return dbGetRandomSongsByCategory(category, count, language);
 };
 
-// Helper function to get recommendations based on fuzzy parameters
-export const getRecommendedSongs = (
+export const getRecommendedSongs = async (
   params: MoodParams, 
   count: number = 5,
   includeEnglish: boolean = true,
   includeHindi: boolean = true
-): Song[] => {
+): Promise<Song[]> => {
   const { category, memberships } = determineSongCategory(params);
-  
-  let songs: Song[] = [];
-  let languages: ('English' | 'Hindi')[] = [];
-  
-  if (includeEnglish) languages.push('English');
-  if (includeHindi) languages.push('Hindi');
-  
-  // Get songs from primary category
-  const primarySongs = songDatabase.filter(
-    song => song.category === category && languages.includes(song.language)
-  );
-  
-  // If we don't have enough, get songs from other categories based on membership strength
-  if (primarySongs.length < count) {
-    // Sort categories by membership value
-    const sortedCategories = Object.entries(memberships)
-      .sort((a, b) => b[1] - a[1])
-      .map(([cat]) => cat as SongCategory)
-      .filter(cat => cat !== category);
-    
-    // Add songs from other categories
-    for (const cat of sortedCategories) {
-      const additionalSongs = songDatabase.filter(
-        song => song.category === cat && languages.includes(song.language)
-      );
-      
-      songs = [...primarySongs, ...additionalSongs];
-      if (songs.length >= count) break;
-    }
-  } else {
-    songs = primarySongs;
-  }
-  
-  // Shuffle and limit
-  return [...songs].sort(() => 0.5 - Math.random()).slice(0, count);
+  const { getRecommendedSongs: dbGetRecommendedSongs } = await import('@/services/songService');
+  return dbGetRecommendedSongs(category, memberships, count, includeEnglish, includeHindi);
 };
