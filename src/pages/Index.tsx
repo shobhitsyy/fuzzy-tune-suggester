@@ -26,28 +26,41 @@ const Index = () => {
   const [includeHindi, setIncludeHindi] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [initializationError, setInitializationError] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Initialize database on component mount
   useEffect(() => {
     const initializeDatabase = async () => {
       try {
+        console.log('Starting database initialization...');
         setIsInitializing(true);
+        setInitializationError(null);
+        
         const isPopulated = await isDatabasePopulated();
+        console.log('Database populated status:', isPopulated);
         
         if (!isPopulated) {
           console.log('Database not populated, initializing...');
           await populateDatabase();
+          console.log('Database population completed');
+          
           toast({
             title: "Database Initialized",
             description: "Song database has been set up successfully!",
           });
+        } else {
+          console.log('Database already populated');
         }
         
         // Get initial recommendations
+        console.log('Getting initial recommendations...');
         await getRecommendations();
+        console.log('Initial recommendations loaded');
+        
       } catch (error) {
         console.error('Error initializing database:', error);
+        setInitializationError('Failed to initialize the music database. Please refresh the page to try again.');
         toast({
           title: "Database Error",
           description: "Failed to initialize song database. Please try again.",
@@ -63,6 +76,7 @@ const Index = () => {
 
   const getRecommendations = async () => {
     if (!includeEnglish && !includeHindi) {
+      console.log('No languages selected, clearing recommendations');
       setRecommendedSongs([]);
       return;
     }
@@ -80,8 +94,15 @@ const Index = () => {
         includeHindi
       );
       
-      console.log('Fetched songs:', songs);
+      console.log('Fetched songs:', songs.length);
       setRecommendedSongs(songs);
+      
+      if (songs.length === 0) {
+        toast({
+          title: "No Songs Found",
+          description: "No songs match your current preferences. Try adjusting your mood settings or language preferences.",
+        });
+      }
     } catch (error) {
       console.error('Error getting recommendations:', error);
       toast({
@@ -96,16 +117,19 @@ const Index = () => {
 
   // Update recommendations when mood params or language preferences change
   useEffect(() => {
-    if (!isInitializing) {
+    if (!isInitializing && !initializationError) {
+      console.log('Mood params or language preferences changed, updating recommendations');
       getRecommendations();
     }
-  }, [moodParams, includeEnglish, includeHindi, isInitializing]);
+  }, [moodParams, includeEnglish, includeHindi, isInitializing, initializationError]);
 
   const handleSongSelect = (song: Song) => {
+    console.log('Song selected:', song.title);
     setSelectedSong(song);
   };
 
   const handleSimilarSongSelect = (song: Song) => {
+    console.log('Similar song selected:', song.title);
     setSelectedSong(song);
   };
 
@@ -118,6 +142,25 @@ const Index = () => {
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600 mx-auto mb-4"></div>
           <h2 className="text-2xl font-semibold text-gray-800 mb-2">Initializing Music Database</h2>
           <p className="text-gray-600">Setting up your personalized music experience...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (initializationError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="text-red-500 mb-4">
+            <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-semibold text-gray-800 mb-2">Database Error</h2>
+          <p className="text-gray-600 mb-4">{initializationError}</p>
+          <Button onClick={() => window.location.reload()} className="bg-purple-600 hover:bg-purple-700">
+            Refresh Page
+          </Button>
         </div>
       </div>
     );
@@ -142,6 +185,7 @@ const Index = () => {
             includeEnglish={includeEnglish}
             includeHindi={includeHindi}
             onLanguageChange={(english, hindi) => {
+              console.log('Language preferences changed:', { english, hindi });
               setIncludeEnglish(english);
               setIncludeHindi(hindi);
             }}

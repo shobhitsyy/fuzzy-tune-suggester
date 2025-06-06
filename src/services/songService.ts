@@ -32,7 +32,17 @@ export const populateDatabase = async (): Promise<void> => {
   try {
     console.log('Starting to populate database with songs...');
     
-    // First, insert all songs
+    // First, check if data already exists
+    const { count: existingSongsCount } = await supabase
+      .from('songs')
+      .select('*', { count: 'exact', head: true });
+
+    if (existingSongsCount && existingSongsCount > 0) {
+      console.log('Database already has songs, skipping population');
+      return;
+    }
+    
+    // Insert all songs
     const songsToInsert = songDatabase.map(song => ({
       id: song.id,
       title: song.title,
@@ -48,16 +58,18 @@ export const populateDatabase = async (): Promise<void> => {
       description: song.description
     }));
 
-    const { error: songsError } = await supabase
+    console.log('Inserting songs:', songsToInsert.length);
+    const { data: insertedSongs, error: songsError } = await supabase
       .from('songs')
-      .upsert(songsToInsert, { onConflict: 'id' });
+      .insert(songsToInsert)
+      .select();
 
     if (songsError) {
       console.error('Error inserting songs:', songsError);
       throw songsError;
     }
 
-    console.log('Songs inserted successfully');
+    console.log('Songs inserted successfully:', insertedSongs?.length || 0);
 
     // Then, insert song similarities
     const similaritiesToInsert: { song_id: string; similar_song_id: string }[] = [];
@@ -74,14 +86,18 @@ export const populateDatabase = async (): Promise<void> => {
     });
 
     if (similaritiesToInsert.length > 0) {
-      const { error: similaritiesError } = await supabase
+      console.log('Inserting similarities:', similaritiesToInsert.length);
+      const { data: insertedSimilarities, error: similaritiesError } = await supabase
         .from('song_similarities')
-        .upsert(similaritiesToInsert, { onConflict: 'song_id,similar_song_id' });
+        .insert(similaritiesToInsert)
+        .select();
 
       if (similaritiesError) {
         console.error('Error inserting song similarities:', similaritiesError);
         throw similaritiesError;
       }
+
+      console.log('Similarities inserted successfully:', insertedSimilarities?.length || 0);
     }
 
     console.log('Database populated successfully');
@@ -97,6 +113,8 @@ export const getSongsByCategory = async (
   language?: 'English' | 'Hindi'
 ): Promise<Song[]> => {
   try {
+    console.log('Fetching songs by category:', category, 'language:', language);
+    
     let query = supabase
       .from('songs')
       .select('*')
@@ -113,6 +131,7 @@ export const getSongsByCategory = async (
       throw error;
     }
 
+    console.log('Songs fetched:', data?.length || 0);
     return data?.map(transformDatabaseSongToSong) || [];
   } catch (error) {
     console.error('Error in getSongsByCategory:', error);
@@ -123,6 +142,8 @@ export const getSongsByCategory = async (
 // Get similar songs for a given song ID
 export const getSimilarSongs = async (songId: string, limit: number = 3): Promise<Song[]> => {
   try {
+    console.log('Fetching similar songs for:', songId);
+    
     const { data: similarities, error: similarityError } = await supabase
       .from('song_similarities')
       .select('similar_song_id')
@@ -135,10 +156,15 @@ export const getSimilarSongs = async (songId: string, limit: number = 3): Promis
     }
 
     if (!similarities || similarities.length === 0) {
+      console.log('No similarities found for song:', songId);
       return [];
     }
 
-    const similarSongIds = similarities.map(s => s.similar_song_id);
+    const similarSongIds = similarities.map(s => s.similar_song_id).filter(Boolean);
+    
+    if (similarSongIds.length === 0) {
+      return [];
+    }
     
     const { data: songs, error: songsError } = await supabase
       .from('songs')
@@ -150,6 +176,7 @@ export const getSimilarSongs = async (songId: string, limit: number = 3): Promis
       throw songsError;
     }
 
+    console.log('Similar songs fetched:', songs?.length || 0);
     return songs?.map(transformDatabaseSongToSong) || [];
   } catch (error) {
     console.error('Error in getSimilarSongs:', error);
@@ -164,6 +191,8 @@ export const getRandomSongsByCategory = async (
   language?: 'English' | 'Hindi'
 ): Promise<Song[]> => {
   try {
+    console.log('Fetching random songs by category:', category, 'count:', count, 'language:', language);
+    
     let query = supabase
       .from('songs')
       .select('*')
@@ -173,7 +202,7 @@ export const getRandomSongsByCategory = async (
       query = query.eq('language', language);
     }
 
-    const { data, error } = await query.limit(count);
+    const { data, error } = await query.limit(count * 2); // Get more to shuffle
 
     if (error) {
       console.error('Error fetching random songs:', error);
@@ -182,7 +211,9 @@ export const getRandomSongsByCategory = async (
 
     // Shuffle the results
     const shuffled = data?.sort(() => 0.5 - Math.random()) || [];
-    return shuffled.slice(0, count).map(transformDatabaseSongToSong);
+    const result = shuffled.slice(0, count).map(transformDatabaseSongToSong);
+    console.log('Random songs fetched:', result.length);
+    return result;
   } catch (error) {
     console.error('Error in getRandomSongsByCategory:', error);
     return [];
@@ -198,9 +229,22 @@ export const getRecommendedSongs = async (
   includeHindi: boolean = true
 ): Promise<Song[]> => {
   try {
+    console.log('Getting recommended songs:', {
+      primaryCategory,
+      memberships,
+      count,
+      includeEnglish,
+      includeHindi
+    });
+
     let languages: ('English' | 'Hindi')[] = [];
     if (includeEnglish) languages.push('English');
     if (includeHindi) languages.push('Hindi');
+
+    if (languages.length === 0) {
+      console.log('No languages selected');
+      return [];
+    }
 
     // Get songs from primary category first
     let query = supabase
@@ -220,6 +264,7 @@ export const getRecommendedSongs = async (
     }
 
     let allSongs = primarySongs || [];
+    console.log('Primary songs found:', allSongs.length);
 
     // If we don't have enough songs, get from other categories
     if (allSongs.length < count) {
@@ -227,6 +272,8 @@ export const getRecommendedSongs = async (
         .sort((a, b) => b[1] - a[1])
         .map(([cat]) => cat as SongCategory)
         .filter(cat => cat !== primaryCategory);
+
+      console.log('Getting additional songs from categories:', sortedCategories);
 
       for (const category of sortedCategories) {
         if (allSongs.length >= count) break;
@@ -244,13 +291,22 @@ export const getRecommendedSongs = async (
         
         if (additionalSongs) {
           allSongs = [...allSongs, ...additionalSongs];
+          console.log('Additional songs from', category, ':', additionalSongs.length);
         }
       }
     }
 
+    // Remove duplicates by id
+    const uniqueSongs = allSongs.filter((song, index, self) => 
+      index === self.findIndex(s => s.id === song.id)
+    );
+
     // Shuffle and limit results
-    const shuffled = allSongs.sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, count).map(transformDatabaseSongToSong);
+    const shuffled = uniqueSongs.sort(() => 0.5 - Math.random());
+    const result = shuffled.slice(0, count).map(transformDatabaseSongToSong);
+    
+    console.log('Final recommended songs:', result.length);
+    return result;
   } catch (error) {
     console.error('Error in getRecommendedSongs:', error);
     return [];
@@ -279,6 +335,8 @@ const transformDatabaseSongToSong = (dbSong: DatabaseSong): Song => {
 // Check if database is populated
 export const isDatabasePopulated = async (): Promise<boolean> => {
   try {
+    console.log('Checking if database is populated...');
+    
     const { count, error } = await supabase
       .from('songs')
       .select('*', { count: 'exact', head: true });
@@ -288,7 +346,9 @@ export const isDatabasePopulated = async (): Promise<boolean> => {
       return false;
     }
 
-    return (count || 0) > 0;
+    const isPopulated = (count || 0) > 0;
+    console.log('Database populated check:', isPopulated, 'songs count:', count);
+    return isPopulated;
   } catch (error) {
     console.error('Error in isDatabasePopulated:', error);
     return false;
