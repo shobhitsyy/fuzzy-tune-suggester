@@ -3,29 +3,48 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { MoodParams } from "@/utils/fuzzyLogic";
-import { Activity, Heart, Clock, Gauge } from "lucide-react";
+import { Activity, Heart, Clock, Gauge, Globe } from "lucide-react";
 
 interface MoodSelectorProps {
-  onParametersChange: (params: MoodParams) => void;
-  onSubmit: () => void;
+  moodParams: MoodParams;
+  onMoodChange: (params: MoodParams) => void;
+  includeEnglish: boolean;
+  includeHindi: boolean;
+  onLanguageChange: (english: boolean, hindi: boolean) => void;
 }
 
-const MoodSelector: React.FC<MoodSelectorProps> = ({ onParametersChange, onSubmit }) => {
-  const [heartRate, setHeartRate] = useState<number>(70);
-  const [timeOfDay, setTimeOfDay] = useState<number>(new Date().getHours());
-  const [activity, setActivity] = useState<number>(5);
-  const [mood, setMood] = useState<number>(5);
+const MoodSelector: React.FC<MoodSelectorProps> = ({ 
+  moodParams, 
+  onMoodChange, 
+  includeEnglish, 
+  includeHindi, 
+  onLanguageChange 
+}) => {
+  const [heartRate, setHeartRate] = useState<number>(moodParams.heartRate);
+  const [timeOfDay, setTimeOfDay] = useState<number>(moodParams.timeOfDay);
+  const [activity, setActivity] = useState<number>(moodParams.activity);
+  const [mood, setMood] = useState<number>(moodParams.mood);
 
   // Update parameters when any value changes
   useEffect(() => {
-    onParametersChange({
+    onMoodChange({
       heartRate,
       timeOfDay,
       activity,
       mood,
     });
-  }, [heartRate, timeOfDay, activity, mood, onParametersChange]);
+  }, [heartRate, timeOfDay, activity, mood, onMoodChange]);
+
+  // Update local state when props change
+  useEffect(() => {
+    setHeartRate(moodParams.heartRate);
+    setTimeOfDay(moodParams.timeOfDay);
+    setActivity(moodParams.activity);
+    setMood(moodParams.mood);
+  }, [moodParams]);
 
   // Helper function for time display
   const formatTime = (hour: number): string => {
@@ -139,12 +158,30 @@ const MoodSelector: React.FC<MoodSelectorProps> = ({ onParametersChange, onSubmi
               </div>
             </div>
 
-            <Button 
-              className="w-full bg-primary/90 backdrop-blur-sm hover:bg-primary/100 transition-all duration-300 shadow-md hover:shadow-lg py-6 text-base"
-              onClick={onSubmit}
-            >
-              Generate Music Recommendations
-            </Button>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Globe className="h-5 w-5 text-orange-500" />
+                <h3 className="text-lg font-medium">Language Preferences</h3>
+              </div>
+              <div className="flex items-center space-x-6">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="english"
+                    checked={includeEnglish}
+                    onCheckedChange={(checked) => onLanguageChange(checked, includeHindi)}
+                  />
+                  <Label htmlFor="english">English</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="hindi"
+                    checked={includeHindi}
+                    onCheckedChange={(checked) => onLanguageChange(includeEnglish, checked)}
+                  />
+                  <Label htmlFor="hindi">Hindi</Label>
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

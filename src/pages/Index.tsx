@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { MoodSelector } from '@/components/MoodSelector';
-import { SongCard } from '@/components/SongCard';
-import { SongDetail } from '@/components/SongDetail';
+import MoodSelector from '@/components/MoodSelector';
+import SongCard from '@/components/SongCard';
+import SongDetail from '@/components/SongDetail';
 import { Button } from '@/components/ui/button';
 import { MoodParams, determineSongCategory, Song } from '@/utils/fuzzyLogic';
 import { 

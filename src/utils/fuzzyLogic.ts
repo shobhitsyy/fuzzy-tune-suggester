@@ -7,6 +7,23 @@ export interface MoodParams {
   mood: number; // 0-10 (0 for calm, 10 for Energetic)
 }
 
+// Song interface
+export interface Song {
+  id: string;
+  title: string;
+  artist: string;
+  album: string;
+  releaseDate: string;
+  language: 'English' | 'Hindi';
+  category: SongCategory;
+  coverImage: string;
+  duration: string;
+  spotifyUrl?: string;
+  similarSongs?: string[];
+  tags: string[];
+  description: string;
+}
+
 // Song genre/type categories
 export enum SongCategory {
   CALM = "Calm",

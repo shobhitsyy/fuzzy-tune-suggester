@@ -123,21 +123,34 @@ export const getSongsByCategory = async (
 // Get similar songs for a given song ID
 export const getSimilarSongs = async (songId: string, limit: number = 3): Promise<Song[]> => {
   try {
-    const { data, error } = await supabase
+    const { data: similarities, error: similarityError } = await supabase
       .from('song_similarities')
-      .select(`
-        similar_song_id,
-        songs:similar_song_id (*)
-      `)
+      .select('similar_song_id')
       .eq('song_id', songId)
       .limit(limit);
 
-    if (error) {
-      console.error('Error fetching similar songs:', error);
-      throw error;
+    if (similarityError) {
+      console.error('Error fetching song similarities:', similarityError);
+      throw similarityError;
     }
 
-    return data?.map(item => transformDatabaseSongToSong(item.songs as DatabaseSong)) || [];
+    if (!similarities || similarities.length === 0) {
+      return [];
+    }
+
+    const similarSongIds = similarities.map(s => s.similar_song_id);
+    
+    const { data: songs, error: songsError } = await supabase
+      .from('songs')
+      .select('*')
+      .in('id', similarSongIds);
+
+    if (songsError) {
+      console.error('Error fetching similar songs:', songsError);
+      throw songsError;
+    }
+
+    return songs?.map(transformDatabaseSongToSong) || [];
   } catch (error) {
     console.error('Error in getSimilarSongs:', error);
     return [];
