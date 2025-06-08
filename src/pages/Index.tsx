@@ -1,11 +1,11 @@
-
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import EnhancedMoodSelector from '@/components/EnhancedMoodSelector';
 import UserPreferences from '@/components/UserPreferences';
-import SongFeedback from '@/components/SongFeedback';
+import SongCard from '@/components/SongCard';
+import SongDetail from '@/components/SongDetail';
 import { Song, MoodParams, determineSongCategory } from '@/utils/fuzzyLogic';
 import { populateDatabase, isDatabasePopulated, getRecommendedSongs } from '@/services/songService';
 import { Music, Sparkles, Heart, Settings } from 'lucide-react';
@@ -31,6 +31,7 @@ const Index = () => {
   });
   
   const [recommendedSongs, setRecommendedSongs] = useState<Song[]>([]);
+  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [dbInitialized, setDbInitialized] = useState(false);
   const [includeEnglish, setIncludeEnglish] = useState(true);
@@ -190,6 +191,10 @@ const Index = () => {
     }
   };
 
+  const handleSongSelect = (song: Song) => {
+    setSelectedSong(song);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900 transition-colors duration-300">
       <div className="container mx-auto px-4 py-8">
@@ -289,11 +294,12 @@ const Index = () => {
                     </Button>
                   </div>
                 ) : (
-                  <div className="grid gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {recommendedSongs.map((song) => (
-                      <SongFeedback
+                      <SongCard
                         key={song.id}
                         song={song}
+                        onClick={handleSongSelect}
                         onFeedback={handleSongFeedback}
                       />
                     ))}
@@ -317,6 +323,15 @@ const Index = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {selectedSong && (
+          <SongDetail
+            song={selectedSong}
+            isOpen={!!selectedSong}
+            onClose={() => setSelectedSong(null)}
+            onSelectSimilar={handleSongSelect}
+          />
+        )}
       </div>
     </div>
   );
