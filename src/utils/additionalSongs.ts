@@ -87,6 +87,34 @@ export const additionalSongs = [
     spotifyUrl: 'https://open.spotify.com/track/4bHsxqR3GMBJdDQEGYvZXh',
     tags: ['acoustic', 'emotional', 'ballad'],
     description: 'A deeply personal and emotional acoustic ballad.'
+  },
+  {
+    id: 'en-calm-21',
+    title: 'Skinny Love',
+    artist: 'Bon Iver',
+    album: 'For Emma, Forever Ago',
+    releaseDate: '2007-07-20',
+    language: 'English' as const,
+    category: SongCategory.CALM,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b273aa5ac0e512c1743cf4b47506',
+    duration: '3:58',
+    spotifyUrl: 'https://open.spotify.com/track/01XJJELGNFPFnp7HLm6R3F',
+    tags: ['indie folk', 'falsetto', 'intimate'],
+    description: 'An intimate falsetto performance with minimal instrumentation.'
+  },
+  {
+    id: 'en-calm-22',
+    title: 'River',
+    artist: 'Joni Mitchell',
+    album: 'Blue',
+    releaseDate: '1971-06-22',
+    language: 'English' as const,
+    category: SongCategory.CALM,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b273b2b2747c89d68d5330e0d735',
+    duration: '4:00',
+    spotifyUrl: 'https://open.spotify.com/track/4fzZgBXQQADAzYNAWr8dBV',
+    tags: ['folk', 'melancholic', 'piano'],
+    description: 'A melancholic reflection with beautiful piano and poetic lyrics.'
   }
 ];
 
@@ -119,6 +147,34 @@ export const additionalHindiSongs = [
     spotifyUrl: 'https://open.spotify.com/track/5qI8ZdrtP3pI8V9g9Dd9qX',
     tags: ['bollywood', 'romantic', 'soulful'],
     description: 'A beautiful romantic song with contemporary arrangements.'
+  },
+  {
+    id: 'hi-calm-16',
+    title: 'Kabira',
+    artist: 'Tochi Raina, Rekha Bhardwaj',
+    album: 'Yeh Jawaani Hai Deewani',
+    releaseDate: '2013-05-31',
+    language: 'Hindi' as const,
+    category: SongCategory.CALM,
+    coverImage: 'https://c.saavncdn.com/171/Yeh-Jawaani-Hai-Deewani-Hindi-2013-500x500.jpg',
+    duration: '4:17',
+    spotifyUrl: 'https://open.spotify.com/track/1t9rOF7OZDa5ojeL1iEhVN',
+    tags: ['bollywood', 'philosophical', 'acoustic'],
+    description: 'A philosophical song with beautiful acoustic arrangements.'
+  },
+  {
+    id: 'hi-calm-17',
+    title: 'Ae Dil Hai Mushkil',
+    artist: 'Arijit Singh',
+    album: 'Ae Dil Hai Mushkil',
+    releaseDate: '2016-10-28',
+    language: 'Hindi' as const,
+    category: SongCategory.CALM,
+    coverImage: 'https://c.saavncdn.com/742/Ae-Dil-Hai-Mushkil-Hindi-2016-500x500.jpg',
+    duration: '4:28',
+    spotifyUrl: 'https://open.spotify.com/track/2EJM8ZnBFjJ8nxmhgj7cON',
+    tags: ['bollywood', 'heartbreak', 'emotional'],
+    description: 'A heart-wrenching ballad about the pain of unrequited love.'
   }
 ];
 
@@ -151,6 +207,20 @@ export const additionalRelaxedSongs = [
     spotifyUrl: 'https://open.spotify.com/track/5wTNQa01o2Y7VQopExR7HW',
     tags: ['britpop', 'alternative rock', 'anthem'],
     description: 'An iconic Britpop anthem with memorable melodies.'
+  },
+  {
+    id: 'en-relaxed-8',
+    title: 'Creep',
+    artist: 'Radiohead',
+    album: 'Pablo Honey',
+    releaseDate: '1992-09-21',
+    language: 'English' as const,
+    category: SongCategory.RELAXED,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b2736cf9b0893284e0c3bb9d7c67',
+    duration: '3:58',
+    spotifyUrl: 'https://open.spotify.com/track/70LcF31zb1H0PyJoS1Sx1r',
+    tags: ['alternative rock', 'grunge', 'melancholic'],
+    description: 'A melancholic alternative rock classic with raw emotion.'
   }
 ];
 
@@ -163,7 +233,7 @@ export const additionalModerateSongs = [
     album: 'Blowin\' Your Mind!',
     releaseDate: '1967-09-30',
     language: 'English' as const,
-    category: SongCategory.MODERATE,
+    category: SongCategory.Moderate,
     coverImage: 'https://i.scdn.co/image/ab67616d0000b273a1a2f9ef42c94cdca25813e4',
     duration: '3:05',
     spotifyUrl: 'https://open.spotify.com/track/3eekarcy7kvN4yt5ZFzltW',
@@ -177,12 +247,26 @@ export const additionalModerateSongs = [
     album: 'Exodus',
     releaseDate: '1977-06-03',
     language: 'English' as const,
-    category: SongCategory.MODERATE,
+    category: SongCategory.Moderate,
     coverImage: 'https://i.scdn.co/image/ab67616d0000b273085c9725c1bb4d3a0d4ee12b',
     duration: '3:00',
     spotifyUrl: 'https://open.spotify.com/track/6JV2JOEocMgcZxYSZelKcc',
     tags: ['reggae', 'positive', 'classic'],
     description: 'A timeless reggae classic with a positive message.'
+  },
+  {
+    id: 'en-moderate-7',
+    title: 'Sweet Child O\' Mine',
+    artist: 'Guns N\' Roses',
+    album: 'Appetite for Destruction',
+    releaseDate: '1987-07-21',
+    language: 'English' as const,
+    category: SongCategory.Moderate,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b273a9c4d2ec4d8e1d7f5c5b9a4d',
+    duration: '5:03',
+    spotifyUrl: 'https://open.spotify.com/track/7o2CTH4ctstm8TNelqjb51',
+    tags: ['hard rock', 'classic', 'guitar'],
+    description: 'A classic hard rock anthem with iconic guitar work.'
   }
 ];
 
@@ -195,7 +279,7 @@ export const additionalUpbeatSongs = [
     album: 'Uptown Special',
     releaseDate: '2014-11-10',
     language: 'English' as const,
-    category: SongCategory.UPBEAT,
+    category: SongCategory.Upbeat,
     coverImage: 'https://i.scdn.co/image/ab67616d0000b273f25c4c4b748bd47b369dd3b3',
     duration: '4:30',
     spotifyUrl: 'https://open.spotify.com/track/32OlwWuMpZ6b0aN2RZOeMS',
@@ -209,12 +293,26 @@ export const additionalUpbeatSongs = [
     album: 'The E.N.D.',
     releaseDate: '2009-05-21',
     language: 'English' as const,
-    category: SongCategory.UPBEAT,
+    category: SongCategory.Upbeat,
     coverImage: 'https://i.scdn.co/image/ab67616d0000b273e5e5dc4f7f8cd8c800c19bc4',
     duration: '4:49',
     spotifyUrl: 'https://open.spotify.com/track/2ZWlPOoWh0626oTaHrnl2a',
     tags: ['dance pop', 'electronic', 'party'],
     description: 'An infectious party anthem with electronic dance beats.'
+  },
+  {
+    id: 'en-upbeat-8',
+    title: 'Happy',
+    artist: 'Pharrell Williams',
+    album: 'G I R L',
+    releaseDate: '2013-11-21',
+    language: 'English' as const,
+    category: SongCategory.Upbeat,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b273e13de7b8662b085b0885ffef',
+    duration: '3:53',
+    spotifyUrl: 'https://open.spotify.com/track/60nZcImufyMA1MKQY3dcCH',
+    tags: ['pop', 'feel good', 'uplifting'],
+    description: 'An irresistibly happy and uplifting pop anthem.'
   }
 ];
 
@@ -227,7 +325,7 @@ export const additionalEnergeticSongs = [
     album: 'News of the World',
     releaseDate: '1977-10-07',
     language: 'English' as const,
-    category: SongCategory.ENERGETIC,
+    category: SongCategory.Energetic,
     coverImage: 'https://i.scdn.co/image/ab67616d0000b2734637341b9f507521afa9a778',
     duration: '2:02',
     spotifyUrl: 'https://open.spotify.com/track/4pbJqGIASGPr0ZpGpnWkDn',
@@ -241,11 +339,25 @@ export const additionalEnergeticSongs = [
     album: 'Jazz',
     releaseDate: '1978-10-13',
     language: 'English' as const,
-    category: SongCategory.ENERGETIC,
+    category: SongCategory.Energetic,
     coverImage: 'https://i.scdn.co/image/ab67616d0000b273aa5ac0e512c1743cf4b47506',
     duration: '3:29',
     spotifyUrl: 'https://open.spotify.com/track/5T8EDUDqKcs6OSOwEsfqG7',
     tags: ['rock', 'feel good', 'euphoric'],
     description: 'An exuberant celebration of life with soaring vocals and piano.'
+  },
+  {
+    id: 'en-energetic-8',
+    title: 'Livin\' on a Prayer',
+    artist: 'Bon Jovi',
+    album: 'Slippery When Wet',
+    releaseDate: '1986-08-18',
+    language: 'English' as const,
+    category: SongCategory.Energetic,
+    coverImage: 'https://i.scdn.co/image/ab67616d0000b273025c4e7c5d3d9f8c41b06da1',
+    duration: '4:09',
+    spotifyUrl: 'https://open.spotify.com/track/37ZJ0p5Jm13JPevGcx4SkF',
+    tags: ['rock', 'anthemic', 'classic'],
+    description: 'An anthemic rock classic with powerful vocals and energy.'
   }
 ];

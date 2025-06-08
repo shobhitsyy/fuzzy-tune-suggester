@@ -24,16 +24,17 @@ interface UserPreferencesType {
 
 const Index = () => {
   const [currentMood, setCurrentMood] = useState<MoodParams>({
-    energy: 5,
-    valence: 5,
-    arousal: 5,
-    focus: 5,
-    social: 5
+    heartRate: 70,
+    timeOfDay: 12,
+    activity: 5,
+    mood: 5
   });
   
   const [recommendedSongs, setRecommendedSongs] = useState<Song[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [dbInitialized, setDbInitialized] = useState(false);
+  const [includeEnglish, setIncludeEnglish] = useState(true);
+  const [includeHindi, setIncludeHindi] = useState(true);
   const [preferences, setPreferences] = useState<UserPreferencesType>({
     defaultLanguage: 'both' as 'English' | 'Hindi' | 'both',
     recommendationCount: 20,
@@ -55,7 +56,20 @@ const Index = () => {
   const loadPreferences = () => {
     const saved = localStorage.getItem('musicPreferences');
     if (saved) {
-      setPreferences(JSON.parse(saved));
+      const parsedPrefs = JSON.parse(saved);
+      setPreferences(parsedPrefs);
+      
+      // Update language preferences
+      if (parsedPrefs.defaultLanguage === 'English') {
+        setIncludeEnglish(true);
+        setIncludeHindi(false);
+      } else if (parsedPrefs.defaultLanguage === 'Hindi') {
+        setIncludeEnglish(false);
+        setIncludeHindi(true);
+      } else {
+        setIncludeEnglish(true);
+        setIncludeHindi(true);
+      }
     }
   };
 
@@ -99,9 +113,6 @@ const Index = () => {
     try {
       const { category, memberships } = determineSongCategory(currentMood);
       console.log('Getting recommendations for category:', category, 'with memberships:', memberships);
-      
-      const includeEnglish = preferences.defaultLanguage === 'English' || preferences.defaultLanguage === 'both';
-      const includeHindi = preferences.defaultLanguage === 'Hindi' || preferences.defaultLanguage === 'both';
       
       const songs = await getRecommendedSongs(
         category, 
@@ -161,6 +172,17 @@ const Index = () => {
     setPreferences(newPreferences);
   };
 
+  const handleLanguageChange = (english: boolean, hindi: boolean) => {
+    setIncludeEnglish(english);
+    setIncludeHindi(hindi);
+    
+    // Update preferences
+    const newLanguage = english && hindi ? 'both' : english ? 'English' : 'Hindi';
+    const updatedPrefs = { ...preferences, defaultLanguage: newLanguage as 'English' | 'Hindi' | 'both' };
+    setPreferences(updatedPrefs);
+    localStorage.setItem('musicPreferences', JSON.stringify(updatedPrefs));
+  };
+
   const handleTabClick = (tabValue: string) => {
     const tabElement = document.querySelector(`[value="${tabValue}"]`) as HTMLElement;
     if (tabElement) {
@@ -206,7 +228,11 @@ const Index = () => {
               </CardHeader>
               <CardContent>
                 <EnhancedMoodSelector
+                  moodParams={currentMood}
                   onMoodChange={setCurrentMood}
+                  includeEnglish={includeEnglish}
+                  includeHindi={includeHindi}
+                  onLanguageChange={handleLanguageChange}
                 />
                 <div className="text-center mt-8">
                   <Button
