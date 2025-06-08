@@ -1,363 +1,390 @@
 
-import { SongCategory } from './fuzzyLogic';
+import { Song } from './fuzzyLogic';
 
-// Additional songs to expand the database to 100+ records
-export const additionalSongs = [
-  // More CALM English Songs (15 additional)
+export const additionalSongs: Song[] = [
+  // English Calm Songs
   {
-    id: 'en-calm-15',
-    title: 'Mad World',
-    artist: 'Gary Jules',
-    album: 'Trading Snakeoil for Wolftickets',
-    releaseDate: '2001-05-01',
-    language: 'English' as const,
-    category: SongCategory.CALM,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273e2e352d89826aef6dbd5ff8f',
-    duration: '3:07',
-    spotifyUrl: 'https://open.spotify.com/track/3JOVTQ5h8HGFnDdp4VT3MP',
-    tags: ['melancholic', 'acoustic', 'cover'],
-    description: 'A haunting acoustic cover transforming the original into an introspective piece.'
+    id: 'en-calm-1',
+    title: 'Weightless',
+    artist: 'Marconi Union',
+    album: 'Weightless',
+    duration: '8:08',
+    category: 'Calm',
+    coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop',
+    language: 'English',
+    tags: ['ambient', 'relaxation', 'sleep'],
+    releaseDate: '2011-10-17',
+    spotifyUrl: 'https://open.spotify.com/track/4LmSdvGF5LENgJNlqJRr8z',
+    description: 'Scientifically designed to reduce anxiety by 65%.'
   },
   {
-    id: 'en-calm-16',
-    title: 'Breathe Me',
-    artist: 'Sia',
-    album: '1000 Forms of Fear',
-    releaseDate: '2014-07-04',
-    language: 'English' as const,
-    category: SongCategory.CALM,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273cd2bb76c98813c3cf0d60d09',
-    duration: '4:32',
-    spotifyUrl: 'https://open.spotify.com/track/4sBwFXFllBfOzFYjmRhBYD',
-    tags: ['emotional', 'vulnerable', 'piano'],
-    description: 'A vulnerable ballad showcasing Sia\'s emotional range and powerful vocals.'
+    id: 'en-calm-2',
+    title: 'Clair de Lune',
+    artist: 'Claude Debussy',
+    album: 'Suite bergamasque',
+    duration: '5:00',
+    category: 'Calm',
+    coverImage: 'https://images.unsplash.com/photo-1520637836862-4d197d17c90a?w=300&h=300&fit=crop',
+    language: 'English',
+    tags: ['classical', 'piano', 'peaceful'],
+    releaseDate: '1905-01-01',
+    spotifyUrl: 'https://open.spotify.com/track/2IznKQ1tFd3y6YWYdAk5d8',
+    description: 'A beautiful and serene classical piano piece.'
   },
   {
-    id: 'en-calm-17',
-    title: 'Hurt',
-    artist: 'Johnny Cash',
-    album: 'American IV: The Man Comes Around',
-    releaseDate: '2002-11-05',
-    language: 'English' as const,
-    category: SongCategory.CALM,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273912ed19536068c1fc2e5ab0a',
-    duration: '3:38',
-    spotifyUrl: 'https://open.spotify.com/track/2EuIV2gDeGaAqFucHXcWIa',
-    tags: ['country', 'cover', 'emotional'],
-    description: 'Johnny Cash\'s haunting cover filled with raw emotion and vulnerability.'
-  },
-  {
-    id: 'en-calm-18',
-    title: 'Hallelujah',
-    artist: 'Jeff Buckley',
-    album: 'Grace',
-    releaseDate: '1994-08-23',
-    language: 'English' as const,
-    category: SongCategory.CALM,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b2738c9bb82e3e8c7dab32b9a524',
-    duration: '6:53',
-    spotifyUrl: 'https://open.spotify.com/track/2mKkYGXqiXMzweSdEsglNK',
-    tags: ['alternative rock', 'spiritual', 'cover'],
-    description: 'A transcendent cover showcasing Buckley\'s ethereal vocals.'
-  },
-  {
-    id: 'en-calm-19',
-    title: 'The Sound of Silence',
-    artist: 'Simon & Garfunkel',
-    album: 'Sounds of Silence',
-    releaseDate: '1965-10-11',
-    language: 'English' as const,
-    category: SongCategory.CALM,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273a3b05b5ab69c67c79cb5c738',
-    duration: '3:05',
-    spotifyUrl: 'https://open.spotify.com/track/0z9KEXgsVrHSJrE3XtOhBH',
-    tags: ['folk', 'classic', 'introspective'],
-    description: 'A timeless folk classic about isolation and communication.'
-  },
-  {
-    id: 'en-calm-20',
-    title: 'Tears in Heaven',
-    artist: 'Eric Clapton',
-    album: 'Unplugged',
-    releaseDate: '1992-08-25',
-    language: 'English' as const,
-    category: SongCategory.CALM,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273b2b2747c89d68d5330e0d735',
-    duration: '4:32',
-    spotifyUrl: 'https://open.spotify.com/track/4bHsxqR3GMBJdDQEGYvZXh',
-    tags: ['acoustic', 'emotional', 'ballad'],
-    description: 'A deeply personal and emotional acoustic ballad.'
-  },
-  {
-    id: 'en-calm-21',
-    title: 'Skinny Love',
-    artist: 'Bon Iver',
-    album: 'For Emma, Forever Ago',
-    releaseDate: '2007-07-20',
-    language: 'English' as const,
-    category: SongCategory.CALM,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273aa5ac0e512c1743cf4b47506',
-    duration: '3:58',
-    spotifyUrl: 'https://open.spotify.com/track/01XJJELGNFPFnp7HLm6R3F',
-    tags: ['indie folk', 'falsetto', 'intimate'],
-    description: 'An intimate falsetto performance with minimal instrumentation.'
-  },
-  {
-    id: 'en-calm-22',
+    id: 'en-calm-3',
     title: 'River',
     artist: 'Joni Mitchell',
     album: 'Blue',
-    releaseDate: '1971-06-22',
-    language: 'English' as const,
-    category: SongCategory.CALM,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273b2b2747c89d68d5330e0d735',
     duration: '4:00',
-    spotifyUrl: 'https://open.spotify.com/track/4fzZgBXQQADAzYNAWr8dBV',
-    tags: ['folk', 'melancholic', 'piano'],
-    description: 'A melancholic reflection with beautiful piano and poetic lyrics.'
-  }
-];
+    category: 'Calm',
+    coverImage: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300&h=300&fit=crop',
+    language: 'English',
+    tags: ['folk', 'acoustic', 'melancholic'],
+    releaseDate: '1971-06-22',
+    spotifyUrl: 'https://open.spotify.com/track/4iq6o5ojgK1JXDTQEvtT1Y',
+    description: 'A contemplative folk song about longing and solitude.'
+  },
 
-// Additional Hindi songs
-export const additionalHindiSongs = [
+  // English Relaxed Songs
+  {
+    id: 'en-relaxed-1',
+    title: 'Mad World',
+    artist: 'Gary Jules',
+    album: 'Trading Snakeoil for Wolftickets',
+    duration: '3:07',
+    category: 'Relaxed',
+    coverImage: 'https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=300&h=300&fit=crop',
+    language: 'English',
+    tags: ['alternative', 'melancholic', 'cover'],
+    releaseDate: '2001-10-01',
+    spotifyUrl: 'https://open.spotify.com/track/4PiRKlXCOk2VjGjJjL8VtR',
+    description: 'A haunting cover of Tears for Fears original.'
+  },
+  {
+    id: 'en-relaxed-2',
+    title: 'Holocene',
+    artist: 'Bon Iver',
+    album: 'Bon Iver, Bon Iver',
+    duration: '5:36',
+    category: 'Relaxed',
+    coverImage: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop',
+    language: 'English',
+    tags: ['indie folk', 'atmospheric', 'introspective'],
+    releaseDate: '2011-06-17',
+    spotifyUrl: 'https://open.spotify.com/track/5za8RnalIoFl1PbJGrLZqI',
+    description: 'An atmospheric indie folk song about self-reflection.'
+  },
+
+  // English Moderate Songs
+  {
+    id: 'en-moderate-1',
+    title: 'The Night We Met',
+    artist: 'Lord Huron',
+    album: 'Strange Trails',
+    duration: '3:28',
+    category: 'Moderate',
+    coverImage: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=300&h=300&fit=crop',
+    language: 'English',
+    tags: ['indie folk', 'nostalgic', 'acoustic'],
+    releaseDate: '2015-04-07',
+    spotifyUrl: 'https://open.spotify.com/track/7uF7bb7z8yEzT8jT4kd0MD',
+    description: 'A nostalgic indie folk ballad about lost love.'
+  },
+  {
+    id: 'en-moderate-2',
+    title: 'Somebody That I Used to Know',
+    artist: 'Gotye',
+    album: 'Making Mirrors',
+    duration: '4:04',
+    category: 'Moderate',
+    coverImage: 'https://images.unsplash.com/photo-1458560871784-56d23406c091?w=300&h=300&fit=crop',
+    language: 'English',
+    tags: ['indie pop', 'breakup', 'electronic'],
+    releaseDate: '2011-07-05',
+    spotifyUrl: 'https://open.spotify.com/track/2EjZKkjV9EvjPEiW5aeajN',
+    description: 'A melancholic indie pop song about moving on from a relationship.'
+  },
+
+  // English Upbeat Songs
+  {
+    id: 'en-upbeat-1',
+    title: 'Walking on Sunshine',
+    artist: 'Katrina and the Waves',
+    album: 'Walking on Sunshine',
+    duration: '3:59',
+    category: 'Upbeat',
+    coverImage: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop',
+    language: 'English',
+    tags: ['pop rock', 'uplifting', '80s'],
+    releaseDate: '1985-05-10',
+    spotifyUrl: 'https://open.spotify.com/track/05wIrZSwuaVWhcv5FfqeAC',
+    description: 'An uplifting pop rock anthem about feeling great.'
+  },
+  {
+    id: 'en-upbeat-2',
+    title: 'Good as Hell',
+    artist: 'Lizzo',
+    album: 'Cuz I Love You',
+    duration: '2:39',
+    category: 'Upbeat',
+    coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop',
+    language: 'English',
+    tags: ['pop', 'empowering', 'feel-good'],
+    releaseDate: '2019-04-19',
+    spotifyUrl: 'https://open.spotify.com/track/1WkMMavIMc4JZ8cfMmxHkI',
+    description: 'An empowering pop anthem about self-confidence.'
+  },
+
+  // English Energetic Songs
+  {
+    id: 'en-energetic-1',
+    title: 'Pumped Up Kicks',
+    artist: 'Foster the People',
+    album: 'Torches',
+    duration: '3:59',
+    category: 'Energetic',
+    coverImage: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop',
+    language: 'English',
+    tags: ['indie pop', 'electronic', 'catchy'],
+    releaseDate: '2010-09-14',
+    spotifyUrl: 'https://open.spotify.com/track/7w87IxuO7BDcJ3YUqCyMTT',
+    description: 'A catchy indie pop song with electronic elements.'
+  },
+  {
+    id: 'en-energetic-2',
+    title: 'Levitating',
+    artist: 'Dua Lipa',
+    album: 'Future Nostalgia',
+    duration: '3:23',
+    category: 'Energetic',
+    coverImage: 'https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=300&h=300&fit=crop',
+    language: 'English',
+    tags: ['pop', 'disco', 'dance'],
+    releaseDate: '2020-03-27',
+    spotifyUrl: 'https://open.spotify.com/track/463CkQjx2Zk1yXoBuierM9',
+    description: 'A disco-influenced pop song perfect for dancing.'
+  },
+
+  // Hindi Calm Songs
+  {
+    id: 'hi-calm-13',
+    title: 'Kun Faya Kun',
+    artist: 'A.R. Rahman',
+    album: 'Rockstar',
+    duration: '7:52',
+    category: 'Calm',
+    coverImage: 'https://images.unsplash.com/photo-1520637836862-4d197d17c90a?w=300&h=300&fit=crop',
+    language: 'Hindi',
+    tags: ['sufi', 'spiritual', 'devotional'],
+    releaseDate: '2011-09-30',
+    spotifyUrl: 'https://open.spotify.com/track/5vIkG9SbG3LI9i0lj85WpZ',
+    description: 'A beautiful Sufi song about divine love and surrender.'
+  },
   {
     id: 'hi-calm-14',
-    title: 'Tere Naam',
-    artist: 'Udit Narayan, Alka Yagnik',
-    album: 'Tere Naam',
-    releaseDate: '2003-08-15',
-    language: 'Hindi' as const,
-    category: SongCategory.CALM,
-    coverImage: 'https://c.saavncdn.com/788/Tere-Naam-Hindi-2003-20190702102239-500x500.jpg',
-    duration: '5:15',
-    spotifyUrl: 'https://open.spotify.com/track/4mCKLy2k3qU7p8xLQqV5xQ',
-    tags: ['bollywood', 'romantic', 'emotional'],
-    description: 'A deeply emotional love ballad from the classic Bollywood film.'
-  },
-  {
-    id: 'hi-calm-15',
-    title: 'Moh Moh Ke Dhaage',
-    artist: 'Monali Thakur',
-    album: 'Dum Laga Ke Haisha',
-    releaseDate: '2015-02-27',
-    language: 'Hindi' as const,
-    category: SongCategory.CALM,
-    coverImage: 'https://c.saavncdn.com/364/Dum-Laga-Ke-Haisha-Hindi-2015-500x500.jpg',
-    duration: '4:28',
-    spotifyUrl: 'https://open.spotify.com/track/5qI8ZdrtP3pI8V9g9Dd9qX',
-    tags: ['bollywood', 'romantic', 'soulful'],
-    description: 'A beautiful romantic song with contemporary arrangements.'
-  },
-  {
-    id: 'hi-calm-16',
-    title: 'Kabira',
-    artist: 'Tochi Raina, Rekha Bhardwaj',
-    album: 'Yeh Jawaani Hai Deewani',
-    releaseDate: '2013-05-31',
-    language: 'Hindi' as const,
-    category: SongCategory.CALM,
-    coverImage: 'https://c.saavncdn.com/171/Yeh-Jawaani-Hai-Deewani-Hindi-2013-500x500.jpg',
-    duration: '4:17',
-    spotifyUrl: 'https://open.spotify.com/track/1t9rOF7OZDa5ojeL1iEhVN',
-    tags: ['bollywood', 'philosophical', 'acoustic'],
-    description: 'A philosophical song with beautiful acoustic arrangements.'
-  },
-  {
-    id: 'hi-calm-17',
-    title: 'Ae Dil Hai Mushkil',
+    title: 'Shayad',
     artist: 'Arijit Singh',
-    album: 'Ae Dil Hai Mushkil',
-    releaseDate: '2016-10-28',
-    language: 'Hindi' as const,
-    category: SongCategory.CALM,
-    coverImage: 'https://c.saavncdn.com/742/Ae-Dil-Hai-Mushkil-Hindi-2016-500x500.jpg',
+    album: 'Love Aaj Kal',
+    duration: '3:18',
+    category: 'Calm',
+    coverImage: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300&h=300&fit=crop',
+    language: 'Hindi',
+    tags: ['romantic', 'melancholic', 'modern'],
+    releaseDate: '2020-01-17',
+    spotifyUrl: 'https://open.spotify.com/track/4JcoqZjZ9KuS9JJQqQHOe2',
+    description: 'A tender romantic ballad about uncertain love.'
+  },
+
+  // Hindi Relaxed Songs
+  {
+    id: 'hi-relaxed-5',
+    title: 'Pasoori',
+    artist: 'Ali Sethi',
+    album: 'Coke Studio Season 14',
+    duration: '4:03',
+    category: 'Relaxed',
+    coverImage: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop',
+    language: 'Hindi',
+    tags: ['punjabi', 'contemporary', 'fusion'],
+    releaseDate: '2022-02-03',
+    spotifyUrl: 'https://open.spotify.com/track/2PvKoyLnfqjzR2XvxuOZZy',
+    description: 'A contemporary Punjabi fusion hit with soulful vocals.'
+  },
+  {
+    id: 'hi-relaxed-6',
+    title: 'Mere Naam Tu',
+    artist: 'Abhay Jodhpurkar',
+    album: 'Zero',
     duration: '4:28',
-    spotifyUrl: 'https://open.spotify.com/track/2EJM8ZnBFjJ8nxmhgj7cON',
-    tags: ['bollywood', 'heartbreak', 'emotional'],
-    description: 'A heart-wrenching ballad about the pain of unrequited love.'
-  }
-];
+    category: 'Relaxed',
+    coverImage: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=300&h=300&fit=crop',
+    language: 'Hindi',
+    tags: ['romantic', 'soft', 'melodic'],
+    releaseDate: '2018-11-09',
+    spotifyUrl: 'https://open.spotify.com/track/1rqqVE6MZDwOHgMkzP7FTJ',
+    description: 'A soft romantic melody about love and devotion.'
+  },
 
-// Additional Relaxed songs
-export const additionalRelaxedSongs = [
+  // Hindi Moderate Songs
   {
-    id: 'en-relaxed-6',
-    title: 'Mad About You',
-    artist: 'Sting',
-    album: 'Ten Summoner\'s Tales',
-    releaseDate: '1993-03-09',
-    language: 'English' as const,
-    category: SongCategory.RELAXED,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b2730f6ca1e92db0b1e1b6e1ecfc',
-    duration: '3:53',
-    spotifyUrl: 'https://open.spotify.com/track/4N5DaZNTwSd3wUIZP9lTKN',
-    tags: ['alternative rock', 'jazz', 'romantic'],
-    description: 'A smooth blend of rock and jazz elements with romantic themes.'
+    id: 'hi-moderate-5',
+    title: 'Kabira',
+    artist: 'Tochi Raina',
+    album: 'Yeh Jawaani Hai Deewani',
+    duration: '4:18',
+    category: 'Moderate',
+    coverImage: 'https://images.unsplash.com/photo-1458560871784-56d23406c091?w=300&h=300&fit=crop',
+    language: 'Hindi',
+    tags: ['sufi', 'philosophical', 'acoustic'],
+    releaseDate: '2013-05-19',
+    spotifyUrl: 'https://open.spotify.com/track/7cKNbSrMBR3pV8OpH2lEXt',
+    description: 'A philosophical Sufi song about lifes journey.'
   },
   {
-    id: 'en-relaxed-7',
-    title: 'Wonderwall',
-    artist: 'Oasis',
-    album: '(What\'s the Story) Morning Glory?',
-    releaseDate: '1995-10-02',
-    language: 'English' as const,
-    category: SongCategory.RELAXED,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b2731b0b1f3b16f7b1c3e1a1a1a1',
-    duration: '4:19',
-    spotifyUrl: 'https://open.spotify.com/track/5wTNQa01o2Y7VQopExR7HW',
-    tags: ['britpop', 'alternative rock', 'anthem'],
-    description: 'An iconic Britpop anthem with memorable melodies.'
+    id: 'hi-moderate-6',
+    title: 'Raabta',
+    artist: 'Arijit Singh',
+    album: 'Agent Vinod',
+    duration: '4:05',
+    category: 'Moderate',
+    coverImage: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop',
+    language: 'Hindi',
+    tags: ['romantic', 'soulful', 'connection'],
+    releaseDate: '2012-03-15',
+    spotifyUrl: 'https://open.spotify.com/track/0D14SaZEDnPzm3qp4FJKoZ',
+    description: 'A soulful song about deep emotional connections.'
+  },
+
+  // Hindi Upbeat Songs
+  {
+    id: 'hi-upbeat-5',
+    title: 'Gallan Goodiyaan',
+    artist: 'Yashita Sharma, Manish Kumar Tipu',
+    album: 'Dil Dhadakne Do',
+    duration: '4:23',
+    category: 'Upbeat',
+    coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop',
+    language: 'Hindi',
+    tags: ['punjabi', 'celebration', 'wedding'],
+    releaseDate: '2015-04-15',
+    spotifyUrl: 'https://open.spotify.com/track/0ZfvCr35kODCkU36FUIpU0',
+    description: 'An energetic Punjabi celebration song perfect for weddings.'
   },
   {
-    id: 'en-relaxed-8',
-    title: 'Creep',
-    artist: 'Radiohead',
-    album: 'Pablo Honey',
-    releaseDate: '1992-09-21',
-    language: 'English' as const,
-    category: SongCategory.RELAXED,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b2736cf9b0893284e0c3bb9d7c67',
+    id: 'hi-upbeat-6',
+    title: 'Nagada Sang Dhol',
+    artist: 'Shreya Ghoshal, Osman Mir',
+    album: 'Goliyon Ki Raasleela Ram-Leela',
+    duration: '4:57',
+    category: 'Upbeat',
+    coverImage: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop',
+    language: 'Hindi',
+    tags: ['classical', 'dance', 'festive'],
+    releaseDate: '2013-10-15',
+    spotifyUrl: 'https://open.spotify.com/track/4UmqDBp1ZjF8QDfVL4a5md',
+    description: 'A classical dance number with festive energy.'
+  },
+
+  // Hindi Energetic Songs
+  {
+    id: 'hi-energetic-5',
+    title: 'Malhari',
+    artist: 'Vishal Dadlani',
+    album: 'Bajirao Mastani',
+    duration: '3:12',
+    category: 'Energetic',
+    coverImage: 'https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=300&h=300&fit=crop',
+    language: 'Hindi',
+    tags: ['powerful', 'warrior', 'motivational'],
+    releaseDate: '2015-10-08',
+    spotifyUrl: 'https://open.spotify.com/track/5ZFUvpN1CxhEw51lCOJjN2',
+    description: 'A powerful warrior anthem with motivational energy.'
+  },
+  {
+    id: 'hi-energetic-6',
+    title: 'Apna Time Aayega',
+    artist: 'Ranveer Singh, Divine',
+    album: 'Gully Boy',
+    duration: '3:04',
+    category: 'Energetic',
+    coverImage: 'https://images.unsplash.com/photo-1520637836862-4d197d17c90a?w=300&h=300&fit=crop',
+    language: 'Hindi',
+    tags: ['rap', 'motivational', 'street'],
+    releaseDate: '2019-01-09',
+    spotifyUrl: 'https://open.spotify.com/track/7tI8dRuH2Yc6RuoTjxo4aU',
+    description: 'A motivational rap anthem about seizing opportunities.'
+  },
+
+  // Additional English Songs
+  {
+    id: 'en-calm-4',
+    title: 'Mad World',
+    artist: 'Tears for Fears',
+    album: 'The Hurting',
+    duration: '3:30',
+    category: 'Calm',
+    coverImage: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300&h=300&fit=crop',
+    language: 'English',
+    tags: ['new wave', 'melancholic', 'original'],
+    releaseDate: '1982-09-12',
+    spotifyUrl: 'https://open.spotify.com/track/4ccm8EXWl4wwpGmKiPClJH',
+    description: 'The original version of the melancholic new wave classic.'
+  },
+  {
+    id: 'en-relaxed-3',
+    title: 'Skinny Love',
+    artist: 'Bon Iver',
+    album: 'For Emma, Forever Ago',
     duration: '3:58',
-    spotifyUrl: 'https://open.spotify.com/track/70LcF31zb1H0PyJoS1Sx1r',
-    tags: ['alternative rock', 'grunge', 'melancholic'],
-    description: 'A melancholic alternative rock classic with raw emotion.'
-  }
-];
-
-// Additional Moderate songs
-export const additionalModerateSongs = [
-  {
-    id: 'en-moderate-5',
-    title: 'Brown Eyed Girl',
-    artist: 'Van Morrison',
-    album: 'Blowin\' Your Mind!',
-    releaseDate: '1967-09-30',
-    language: 'English' as const,
-    category: SongCategory.Moderate,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273a1a2f9ef42c94cdca25813e4',
-    duration: '3:05',
-    spotifyUrl: 'https://open.spotify.com/track/3eekarcy7kvN4yt5ZFzltW',
-    tags: ['classic rock', 'feel good', 'nostalgic'],
-    description: 'A nostalgic feel-good classic with uplifting vibes.'
+    category: 'Relaxed',
+    coverImage: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop',
+    language: 'English',
+    tags: ['indie folk', 'falsetto', 'emotional'],
+    releaseDate: '2007-07-20',
+    spotifyUrl: 'https://open.spotify.com/track/4h97GHBmDYNlq5PJPjPXe2',
+    description: 'An emotional indie folk song with haunting falsetto vocals.'
   },
   {
-    id: 'en-moderate-6',
-    title: 'Three Little Birds',
-    artist: 'Bob Marley & The Wailers',
-    album: 'Exodus',
-    releaseDate: '1977-06-03',
-    language: 'English' as const,
-    category: SongCategory.Moderate,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273085c9725c1bb4d3a0d4ee12b',
-    duration: '3:00',
-    spotifyUrl: 'https://open.spotify.com/track/6JV2JOEocMgcZxYSZelKcc',
-    tags: ['reggae', 'positive', 'classic'],
-    description: 'A timeless reggae classic with a positive message.'
+    id: 'en-moderate-3',
+    title: 'High Hopes',
+    artist: 'Panic! At The Disco',
+    album: 'Pray for the Wicked',
+    duration: '3:10',
+    category: 'Moderate',
+    coverImage: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=300&h=300&fit=crop',
+    language: 'English',
+    tags: ['pop rock', 'optimistic', 'anthem'],
+    releaseDate: '2018-05-23',
+    spotifyUrl: 'https://open.spotify.com/track/1rqqCSm0Qe4I9rUvWJBuRL',
+    description: 'An optimistic pop rock anthem about perseverance.'
   },
   {
-    id: 'en-moderate-7',
-    title: 'Sweet Child O\' Mine',
-    artist: 'Guns N\' Roses',
-    album: 'Appetite for Destruction',
-    releaseDate: '1987-07-21',
-    language: 'English' as const,
-    category: SongCategory.Moderate,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273a9c4d2ec4d8e1d7f5c5b9a4d',
-    duration: '5:03',
-    spotifyUrl: 'https://open.spotify.com/track/7o2CTH4ctstm8TNelqjb51',
-    tags: ['hard rock', 'classic', 'guitar'],
-    description: 'A classic hard rock anthem with iconic guitar work.'
-  }
-];
-
-// Additional Upbeat songs
-export const additionalUpbeatSongs = [
-  {
-    id: 'en-upbeat-6',
-    title: 'Uptown Funk',
-    artist: 'Mark Ronson ft. Bruno Mars',
-    album: 'Uptown Special',
-    releaseDate: '2014-11-10',
-    language: 'English' as const,
-    category: SongCategory.Upbeat,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273f25c4c4b748bd47b369dd3b3',
-    duration: '4:30',
-    spotifyUrl: 'https://open.spotify.com/track/32OlwWuMpZ6b0aN2RZOeMS',
-    tags: ['funk', 'pop', 'dance'],
-    description: 'A funk-infused pop hit that\'s impossible not to dance to.'
+    id: 'en-upbeat-3',
+    title: 'Cant Stop the Feeling!',
+    artist: 'Justin Timberlake',
+    album: 'Trolls (Original Motion Picture Soundtrack)',
+    duration: '3:56',
+    category: 'Upbeat',
+    coverImage: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop',
+    language: 'English',
+    tags: ['pop', 'feel-good', 'dance'],
+    releaseDate: '2016-05-06',
+    spotifyUrl: 'https://open.spotify.com/track/6KuQTIu1KoTTkLXKWPJb0J',
+    description: 'A feel-good pop dance track that will lift your spirits.'
   },
   {
-    id: 'en-upbeat-7',
-    title: 'I Gotta Feeling',
-    artist: 'The Black Eyed Peas',
-    album: 'The E.N.D.',
-    releaseDate: '2009-05-21',
-    language: 'English' as const,
-    category: SongCategory.Upbeat,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273e5e5dc4f7f8cd8c800c19bc4',
-    duration: '4:49',
-    spotifyUrl: 'https://open.spotify.com/track/2ZWlPOoWh0626oTaHrnl2a',
-    tags: ['dance pop', 'electronic', 'party'],
-    description: 'An infectious party anthem with electronic dance beats.'
-  },
-  {
-    id: 'en-upbeat-8',
-    title: 'Happy',
-    artist: 'Pharrell Williams',
-    album: 'G I R L',
-    releaseDate: '2013-11-21',
-    language: 'English' as const,
-    category: SongCategory.Upbeat,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273e13de7b8662b085b0885ffef',
-    duration: '3:53',
-    spotifyUrl: 'https://open.spotify.com/track/60nZcImufyMA1MKQY3dcCH',
-    tags: ['pop', 'feel good', 'uplifting'],
-    description: 'An irresistibly happy and uplifting pop anthem.'
-  }
-];
-
-// Additional Energetic songs
-export const additionalEnergeticSongs = [
-  {
-    id: 'en-energetic-6',
-    title: 'We Will Rock You',
-    artist: 'Queen',
-    album: 'News of the World',
-    releaseDate: '1977-10-07',
-    language: 'English' as const,
-    category: SongCategory.Energetic,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b2734637341b9f507521afa9a778',
-    duration: '2:02',
-    spotifyUrl: 'https://open.spotify.com/track/4pbJqGIASGPr0ZpGpnWkDn',
-    tags: ['rock', 'anthemic', 'stadium'],
-    description: 'The ultimate stadium anthem with iconic stomp-stomp-clap rhythm.'
-  },
-  {
-    id: 'en-energetic-7',
-    title: 'Don\'t Stop Me Now',
-    artist: 'Queen',
-    album: 'Jazz',
-    releaseDate: '1978-10-13',
-    language: 'English' as const,
-    category: SongCategory.Energetic,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273aa5ac0e512c1743cf4b47506',
-    duration: '3:29',
-    spotifyUrl: 'https://open.spotify.com/track/5T8EDUDqKcs6OSOwEsfqG7',
-    tags: ['rock', 'feel good', 'euphoric'],
-    description: 'An exuberant celebration of life with soaring vocals and piano.'
-  },
-  {
-    id: 'en-energetic-8',
-    title: 'Livin\' on a Prayer',
-    artist: 'Bon Jovi',
-    album: 'Slippery When Wet',
-    releaseDate: '1986-08-18',
-    language: 'English' as const,
-    category: SongCategory.Energetic,
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273025c4e7c5d3d9f8c41b06da1',
-    duration: '4:09',
-    spotifyUrl: 'https://open.spotify.com/track/37ZJ0p5Jm13JPevGcx4SkF',
-    tags: ['rock', 'anthemic', 'classic'],
-    description: 'An anthemic rock classic with powerful vocals and energy.'
+    id: 'en-energetic-3',
+    title: 'Thunder',
+    artist: 'Imagine Dragons',
+    album: 'Evolve',
+    duration: '3:07',
+    category: 'Energetic',
+    coverImage: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop',
+    language: 'English',
+    tags: ['pop rock', 'electronic', 'powerful'],
+    releaseDate: '2017-04-27',
+    spotifyUrl: 'https://open.spotify.com/track/1zB4vmk8tFRmM9UULNzbLB',
+    description: 'A powerful pop rock anthem with electronic elements.'
   }
 ];

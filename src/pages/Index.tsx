@@ -196,37 +196,37 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900 transition-colors duration-300">
+    <div className="min-h-screen bg-background transition-colors duration-300">
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-4">
+          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent mb-4">
             MoodTunes
           </h1>
-          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
             Discover music that perfectly matches your mood. Get personalized recommendations and explore new songs on Spotify.
           </p>
         </div>
 
         <Tabs defaultValue="discover" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
-            <TabsTrigger value="discover" className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700">
+          <TabsList className="grid w-full grid-cols-3 mb-8 bg-card/50 backdrop-blur-sm border border-border">
+            <TabsTrigger value="discover" className="flex items-center gap-2">
               <Music className="h-4 w-4" />
               Discover
             </TabsTrigger>
-            <TabsTrigger value="recommendations" className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700">
+            <TabsTrigger value="recommendations" className="flex items-center gap-2">
               <Sparkles className="h-4 w-4" />
               Your Music
             </TabsTrigger>
-            <TabsTrigger value="preferences" className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700">
+            <TabsTrigger value="preferences" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Preferences
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="discover" className="space-y-8">
-            <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-blue-200 dark:border-blue-800 shadow-xl">
+            <Card className="glass-card shadow-xl">
               <CardHeader className="text-center">
-                <CardTitle className="text-2xl font-bold text-blue-900 dark:text-blue-100 flex items-center justify-center gap-2">
+                <CardTitle className="text-2xl font-bold text-foreground flex items-center justify-center gap-2">
                   <Heart className="h-6 w-6 text-red-500" />
                   How are you feeling today?
                 </CardTitle>
@@ -244,11 +244,11 @@ const Index = () => {
                     onClick={handleGetRecommendations}
                     disabled={isLoading || !dbInitialized}
                     size="lg"
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                   >
                     {isLoading ? (
                       <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground mr-2"></div>
                         Finding Your Perfect Songs...
                       </>
                     ) : (
@@ -259,7 +259,7 @@ const Index = () => {
                     )}
                   </Button>
                   {!dbInitialized && (
-                    <p className="text-sm text-gray-500 mt-2">
+                    <p className="text-sm text-muted-foreground mt-2">
                       Initializing song database...
                     </p>
                   )}
@@ -269,9 +269,9 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="recommendations" className="space-y-6">
-            <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm shadow-xl">
+            <Card className="glass-card shadow-xl">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-purple-900 dark:text-purple-100">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   <Sparkles className="h-5 w-5" />
                   Your Personalized Recommendations ({recommendedSongs.length} songs)
                 </CardTitle>
@@ -279,16 +279,16 @@ const Index = () => {
               <CardContent>
                 {recommendedSongs.length === 0 ? (
                   <div className="text-center py-12">
-                    <Music className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-600 dark:text-gray-300 mb-2">
+                    <Music className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium text-foreground mb-2">
                       No recommendations yet
                     </h3>
-                    <p className="text-gray-500 dark:text-gray-400 mb-6">
+                    <p className="text-muted-foreground mb-6">
                       Set your mood and get personalized song recommendations that you can play on Spotify
                     </p>
                     <Button
                       onClick={() => handleTabClick('discover')}
-                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       Start Discovering Music
                     </Button>
@@ -310,9 +310,9 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="preferences">
-            <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm shadow-xl">
+            <Card className="glass-card shadow-xl">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-green-900 dark:text-green-100">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   <Settings className="h-5 w-5" />
                   Your Music Preferences & Analytics
                 </CardTitle>
