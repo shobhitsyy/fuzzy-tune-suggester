@@ -11,6 +11,17 @@ import { populateDatabase, isDatabasePopulated, getRecommendedSongs } from '@/se
 import { Music, Sparkles, Heart, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+interface UserPreferencesType {
+  defaultLanguage: 'English' | 'Hindi' | 'both';
+  recommendationCount: number;
+  favoriteGenres: string[];
+  excludedGenres: string[];
+  discoveryMode: 'balanced' | 'adventurous' | 'safe';
+  spotifyRedirect: boolean;
+  sensitivity: number;
+  privateMode?: boolean;
+}
+
 const Index = () => {
   const [currentMood, setCurrentMood] = useState<MoodParams>({
     energy: 5,
@@ -23,11 +34,15 @@ const Index = () => {
   const [recommendedSongs, setRecommendedSongs] = useState<Song[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [dbInitialized, setDbInitialized] = useState(false);
-  const [preferences, setPreferences] = useState({
+  const [preferences, setPreferences] = useState<UserPreferencesType>({
     defaultLanguage: 'both' as 'English' | 'Hindi' | 'both',
     recommendationCount: 20,
     favoriteGenres: [] as string[],
-    excludedGenres: [] as string[]
+    excludedGenres: [] as string[],
+    discoveryMode: 'balanced' as 'balanced' | 'adventurous' | 'safe',
+    spotifyRedirect: true,
+    sensitivity: 5,
+    privateMode: false
   });
   
   const { toast } = useToast();
@@ -142,8 +157,15 @@ const Index = () => {
     }
   };
 
-  const handlePreferencesChange = (newPreferences: any) => {
+  const handlePreferencesChange = (newPreferences: UserPreferencesType) => {
     setPreferences(newPreferences);
+  };
+
+  const handleTabClick = (tabValue: string) => {
+    const tabElement = document.querySelector(`[value="${tabValue}"]`) as HTMLElement;
+    if (tabElement) {
+      tabElement.click();
+    }
   };
 
   return (
@@ -185,7 +207,6 @@ const Index = () => {
               <CardContent>
                 <EnhancedMoodSelector
                   onMoodChange={setCurrentMood}
-                  currentMood={currentMood}
                 />
                 <div className="text-center mt-8">
                   <Button
@@ -235,7 +256,7 @@ const Index = () => {
                       Set your mood and get personalized song recommendations that you can play on Spotify
                     </p>
                     <Button
-                      onClick={() => document.querySelector('[value="discover"]')?.click()}
+                      onClick={() => handleTabClick('discover')}
                       className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
                     >
                       Start Discovering Music

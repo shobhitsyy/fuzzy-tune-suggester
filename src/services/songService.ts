@@ -1,7 +1,14 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Song, SongCategory } from '@/utils/fuzzyLogic';
 import { songDatabase } from '@/utils/songData';
+import { 
+  additionalSongs, 
+  additionalHindiSongs, 
+  additionalRelaxedSongs, 
+  additionalModerateSongs, 
+  additionalUpbeatSongs, 
+  additionalEnergeticSongs 
+} from '@/utils/additionalSongs';
 
 export interface DatabaseSong {
   id: string;
@@ -37,13 +44,24 @@ export const populateDatabase = async (): Promise<void> => {
       .from('songs')
       .select('*', { count: 'exact', head: true });
 
-    if (existingSongsCount && existingSongsCount > 0) {
-      console.log('Database already has songs, skipping population');
+    if (existingSongsCount && existingSongsCount >= 100) {
+      console.log('Database already has 100+ songs, skipping population');
       return;
     }
     
+    // Combine all song collections
+    const allSongs = [
+      ...songDatabase,
+      ...additionalSongs,
+      ...additionalHindiSongs,
+      ...additionalRelaxedSongs,
+      ...additionalModerateSongs,
+      ...additionalUpbeatSongs,
+      ...additionalEnergeticSongs
+    ];
+
     // Insert all songs
-    const songsToInsert = songDatabase.map(song => ({
+    const songsToInsert = allSongs.map(song => ({
       id: song.id,
       title: song.title,
       artist: song.artist,
@@ -59,52 +77,87 @@ export const populateDatabase = async (): Promise<void> => {
     }));
 
     console.log('Inserting songs:', songsToInsert.length);
-    const { data: insertedSongs, error: songsError } = await supabase
-      .from('songs')
-      .insert(songsToInsert)
-      .select();
+    
+    // Insert in batches to avoid timeout
+    const batchSize = 20;
+    for (let i = 0; i < songsToInsert.length; i += batchSize) {
+      const batch = songsToInsert.slice(i, i + batchSize);
+      const { data: insertedSongs, error: songsError } = await supabase
+        .from('songs')
+        .upsert(batch, { onConflict: 'id' })
+        .select();
 
-    if (songsError) {
-      console.error('Error inserting songs:', songsError);
-      throw songsError;
+      if (songsError) {
+        console.error('Error inserting song batch:', songsError);
+        throw songsError;
+      }
+
+      console.log(`Batch ${Math.floor(i/batchSize) + 1} inserted successfully:`, insertedSongs?.length || 0);
     }
 
-    console.log('Songs inserted successfully:', insertedSongs?.length || 0);
-
-    // Then, insert song similarities
+    // Create comprehensive similarity relationships
     const similaritiesToInsert: { song_id: string; similar_song_id: string }[] = [];
     
-    songDatabase.forEach(song => {
-      if (song.similarSongs) {
-        song.similarSongs.forEach(similarSongId => {
-          similaritiesToInsert.push({
-            song_id: song.id,
-            similar_song_id: similarSongId
-          });
+    // Generate similarities for all songs
+    allSongs.forEach(song => {
+      const similarSongs = allSongs
+        .filter(otherSong => 
+          otherSong.id !== song.id && 
+          (otherSong.category === song.category || 
+           Math.abs(getSimilarityScore(song, otherSong)) > 0.7)
+        )
+        .slice(0, 3); // Limit to 3 similar songs per song
+
+      similarSongs.forEach(similarSong => {
+        similaritiesToInsert.push({
+          song_id: song.id,
+          similar_song_id: similarSong.id
         });
-      }
+      });
     });
 
     if (similaritiesToInsert.length > 0) {
       console.log('Inserting similarities:', similaritiesToInsert.length);
-      const { data: insertedSimilarities, error: similaritiesError } = await supabase
-        .from('song_similarities')
-        .insert(similaritiesToInsert)
-        .select();
+      
+      // Insert similarities in batches
+      for (let i = 0; i < similaritiesToInsert.length; i += batchSize) {
+        const batch = similaritiesToInsert.slice(i, i + batchSize);
+        const { data: insertedSimilarities, error: similaritiesError } = await supabase
+          .from('song_similarities')
+          .upsert(batch, { onConflict: 'song_id,similar_song_id' })
+          .select();
 
-      if (similaritiesError) {
-        console.error('Error inserting song similarities:', similaritiesError);
-        throw similaritiesError;
+        if (similaritiesError) {
+          console.error('Error inserting similarity batch:', similaritiesError);
+          throw similaritiesError;
+        }
+
+        console.log(`Similarity batch ${Math.floor(i/batchSize) + 1} inserted:`, insertedSimilarities?.length || 0);
       }
-
-      console.log('Similarities inserted successfully:', insertedSimilarities?.length || 0);
     }
 
-    console.log('Database populated successfully');
+    console.log('Database populated successfully with 100+ songs');
   } catch (error) {
     console.error('Error populating database:', error);
     throw error;
   }
+};
+
+// Helper function to calculate similarity score
+const getSimilarityScore = (song1: any, song2: any): number => {
+  let score = 0;
+  
+  // Same language
+  if (song1.language === song2.language) score += 0.3;
+  
+  // Similar tags
+  const commonTags = song1.tags.filter((tag: string) => song2.tags.includes(tag));
+  score += (commonTags.length / Math.max(song1.tags.length, song2.tags.length)) * 0.4;
+  
+  // Same category
+  if (song1.category === song2.category) score += 0.3;
+  
+  return score;
 };
 
 // Get songs by category and language
