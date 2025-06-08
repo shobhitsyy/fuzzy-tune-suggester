@@ -1,242 +1,275 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import EnhancedMoodSelector from '@/components/EnhancedMoodSelector';
-import UserPreferences, { UserPreferences as UserPrefsType } from '@/components/UserPreferences';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MoodParams, determineSongCategory } from '@/utils/fuzzyLogic';
-import { 
-  populateDatabase, 
-  isDatabasePopulated
-} from '@/services/songService';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import EnhancedMoodSelector from '@/components/EnhancedMoodSelector';
+import UserPreferences from '@/components/UserPreferences';
+import SongFeedback from '@/components/SongFeedback';
+import { Song, MoodParams, determineSongCategory } from '@/utils/fuzzyLogic';
+import { populateDatabase, isDatabasePopulated, getRecommendedSongs } from '@/services/songService';
+import { Music, Sparkles, Heart, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Music, User, TrendingUp, Sparkles } from 'lucide-react';
 
 const Index = () => {
-  const navigate = useNavigate();
-  const [moodParams, setMoodParams] = useState<MoodParams>({
-    heartRate: 75,
-    timeOfDay: new Date().getHours(),
-    activity: 5,
-    mood: 5
+  const [currentMood, setCurrentMood] = useState<MoodParams>({
+    energy: 5,
+    valence: 5,
+    arousal: 5,
+    focus: 5,
+    social: 5
   });
-
-  const [includeEnglish, setIncludeEnglish] = useState(true);
-  const [includeHindi, setIncludeHindi] = useState(true);
-  const [isInitializing, setIsInitializing] = useState(true);
-  const [initializationError, setInitializationError] = useState<string | null>(null);
-  const [userPreferences, setUserPreferences] = useState<UserPrefsType | null>(null);
+  
+  const [recommendedSongs, setRecommendedSongs] = useState<Song[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [dbInitialized, setDbInitialized] = useState(false);
+  const [preferences, setPreferences] = useState({
+    defaultLanguage: 'both' as 'English' | 'Hindi' | 'both',
+    recommendationCount: 20,
+    favoriteGenres: [] as string[],
+    excludedGenres: [] as string[]
+  });
+  
   const { toast } = useToast();
 
-  // Initialize database on component mount
   useEffect(() => {
-    const initializeDatabase = async () => {
-      try {
-        console.log('Starting database initialization...');
-        setIsInitializing(true);
-        setInitializationError(null);
-        
-        const isPopulated = await isDatabasePopulated();
-        console.log('Database populated status:', isPopulated);
-        
-        if (!isPopulated) {
-          console.log('Database not populated, initializing...');
-          await populateDatabase();
-          console.log('Database population completed');
-          
-          toast({
-            title: "Database Initialized",
-            description: "Song database has been set up successfully!",
-          });
-        } else {
-          console.log('Database already populated');
-        }
-        
-      } catch (error) {
-        console.error('Error initializing database:', error);
-        setInitializationError('Failed to initialize the music database. Please refresh the page to try again.');
-        toast({
-          title: "Database Error",
-          description: "Failed to initialize song database. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsInitializing(false);
-      }
-    };
-
     initializeDatabase();
-  }, [toast]);
+    loadPreferences();
+  }, []);
 
-  const handleGetRecommendations = () => {
-    if (!includeEnglish && !includeHindi) {
+  const loadPreferences = () => {
+    const saved = localStorage.getItem('musicPreferences');
+    if (saved) {
+      setPreferences(JSON.parse(saved));
+    }
+  };
+
+  const initializeDatabase = async () => {
+    try {
+      console.log('Checking database initialization...');
+      const isPopulated = await isDatabasePopulated();
+      
+      if (!isPopulated) {
+        console.log('Database not populated, initializing...');
+        await populateDatabase();
+        toast({
+          title: "Database Initialized",
+          description: "Song database has been set up successfully!",
+        });
+      }
+      
+      setDbInitialized(true);
+    } catch (error) {
+      console.error('Failed to initialize database:', error);
       toast({
-        title: "Language Required",
-        description: "Please select at least one language to get recommendations.",
+        title: "Database Error",
+        description: "Failed to initialize the song database. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleGetRecommendations = async () => {
+    if (!dbInitialized) {
+      toast({
+        title: "Database Not Ready",
+        description: "Please wait for the database to initialize.",
         variant: "destructive",
       });
       return;
     }
 
-    const { category } = determineSongCategory(moodParams);
-    console.log('Getting recommendations for category:', category);
+    setIsLoading(true);
     
-    // Save to history
-    const historyEntry = {
-      moodParams,
-      includeEnglish,
-      includeHindi,
-      timestamp: new Date().toISOString(),
-      category
-    };
-    
-    const existingHistory = JSON.parse(localStorage.getItem('musicMoodSearchHistory') || '[]');
-    existingHistory.unshift(historyEntry);
-    localStorage.setItem('musicMoodSearchHistory', JSON.stringify(existingHistory.slice(0, 50))); // Keep last 50 searches
-    
-    // Navigate to recommendations page with mood parameters
-    navigate('/recommendations', {
-      state: {
-        moodParams,
+    try {
+      const { category, memberships } = determineSongCategory(currentMood);
+      console.log('Getting recommendations for category:', category, 'with memberships:', memberships);
+      
+      const includeEnglish = preferences.defaultLanguage === 'English' || preferences.defaultLanguage === 'both';
+      const includeHindi = preferences.defaultLanguage === 'Hindi' || preferences.defaultLanguage === 'both';
+      
+      const songs = await getRecommendedSongs(
+        category, 
+        memberships, 
+        preferences.recommendationCount,
         includeEnglish,
-        includeHindi,
-        userPreferences
+        includeHindi
+      );
+      
+      console.log('Received recommended songs:', songs.length);
+      setRecommendedSongs(songs);
+      
+      // Save to listening history if not in private mode
+      if (!preferences.privateMode) {
+        const history = JSON.parse(localStorage.getItem('listeningHistory') || '[]');
+        const newHistory = [...songs.slice(0, 5), ...history].slice(0, 100); // Keep last 100
+        localStorage.setItem('listeningHistory', JSON.stringify(newHistory));
       }
-    });
-  };
-
-  const handlePreferencesChange = (preferences: UserPrefsType) => {
-    setUserPreferences(preferences);
-    // Auto-adjust language preferences based on user settings
-    if (preferences.preferredLanguages.length > 0) {
-      setIncludeEnglish(preferences.preferredLanguages.includes('English'));
-      setIncludeHindi(preferences.preferredLanguages.includes('Hindi'));
+      
+      if (songs.length === 0) {
+        toast({
+          title: "No Recommendations Found",
+          description: "Try adjusting your mood settings or language preferences.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Recommendations Ready!",
+          description: `Found ${songs.length} songs matching your mood. Check them out on Spotify!`,
+        });
+      }
+    } catch (error) {
+      console.error('Error getting recommendations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to get song recommendations. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const { category } = determineSongCategory(moodParams);
+  const handleSongFeedback = (songId: string, rating: 'like' | 'dislike' | 'love', feedback?: string) => {
+    console.log('Song feedback:', { songId, rating, feedback });
+    
+    // Update user preferences based on feedback
+    const song = recommendedSongs.find(s => s.id === songId);
+    if (song && rating === 'love') {
+      const favorites = JSON.parse(localStorage.getItem('favoriteSongs') || '[]');
+      const updatedFavorites = [...favorites, song].slice(0, 50); // Keep last 50
+      localStorage.setItem('favoriteSongs', JSON.stringify(updatedFavorites));
+    }
+  };
 
-  if (isInitializing) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-2">Initializing Music Database</h2>
-          <p className="text-gray-600">Setting up your personalized music experience...</p>
-          <div className="mt-4 text-sm text-gray-500">
-            <p>🎵 Loading song library</p>
-            <p>🔗 Setting up recommendations</p>
-            <p>⚡ Preparing smart features</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (initializationError) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <div className="text-red-500 mb-4">
-            <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-2">Database Error</h2>
-          <p className="text-gray-600 mb-4">{initializationError}</p>
-          <Button onClick={() => window.location.reload()} className="bg-purple-600 hover:bg-purple-700">
-            Refresh Page
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const handlePreferencesChange = (newPreferences: any) => {
+    setPreferences(newPreferences);
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900 transition-colors duration-300">
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            🎵 Music Mood Generator
+          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-4">
+            MoodTunes
           </h1>
-          <p className="text-lg text-gray-600">
-            Discover music that perfectly matches your current vibe with AI-powered recommendations
+          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            Discover music that perfectly matches your mood. Get personalized recommendations and explore new songs on Spotify.
           </p>
-          <div className="flex justify-center space-x-6 mt-4 text-sm text-gray-500">
-            <div className="flex items-center space-x-1">
-              <Sparkles className="h-4 w-4" />
-              <span>Smart Matching</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <TrendingUp className="h-4 w-4" />
-              <span>Personalized</span>
-            </div>
-            <div className="flex items-center space-x-1">
+        </div>
+
+        <Tabs defaultValue="discover" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-8 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+            <TabsTrigger value="discover" className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700">
               <Music className="h-4 w-4" />
-              <span>100+ Songs</span>
-            </div>
-          </div>
-        </div>
+              Discover
+            </TabsTrigger>
+            <TabsTrigger value="recommendations" className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700">
+              <Sparkles className="h-4 w-4" />
+              Your Music
+            </TabsTrigger>
+            <TabsTrigger value="preferences" className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700">
+              <Settings className="h-4 w-4" />
+              Preferences
+            </TabsTrigger>
+          </TabsList>
 
-        <div className="max-w-6xl mx-auto">
-          <Tabs defaultValue="mood" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="mood" className="flex items-center space-x-2">
-                <Music className="h-4 w-4" />
-                <span>Mood Settings</span>
-              </TabsTrigger>
-              <TabsTrigger value="preferences" className="flex items-center space-x-2">
-                <User className="h-4 w-4" />
-                <span>Preferences</span>
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="mood" className="space-y-6">
-              <EnhancedMoodSelector
-                moodParams={moodParams}
-                onMoodChange={setMoodParams}
-                includeEnglish={includeEnglish}
-                includeHindi={includeHindi}
-                onLanguageChange={(english, hindi) => {
-                  console.log('Language preferences changed:', { english, hindi });
-                  setIncludeEnglish(english);
-                  setIncludeHindi(hindi);
-                }}
-              />
-
-              <div className="text-center">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-                    Ready for <span className="text-purple-600">{category}</span> vibes?
-                  </h2>
-                  <p className="text-gray-600">
-                    Click below to discover songs perfectly matched to your current mood
-                  </p>
+          <TabsContent value="discover" className="space-y-8">
+            <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-blue-200 dark:border-blue-800 shadow-xl">
+              <CardHeader className="text-center">
+                <CardTitle className="text-2xl font-bold text-blue-900 dark:text-blue-100 flex items-center justify-center gap-2">
+                  <Heart className="h-6 w-6 text-red-500" />
+                  How are you feeling today?
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <EnhancedMoodSelector
+                  onMoodChange={setCurrentMood}
+                  currentMood={currentMood}
+                />
+                <div className="text-center mt-8">
+                  <Button
+                    onClick={handleGetRecommendations}
+                    disabled={isLoading || !dbInitialized}
+                    size="lg"
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Finding Your Perfect Songs...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-5 w-5 mr-2" />
+                        Get My Recommendations ({preferences.recommendationCount} songs)
+                      </>
+                    )}
+                  </Button>
+                  {!dbInitialized && (
+                    <p className="text-sm text-gray-500 mt-2">
+                      Initializing song database...
+                    </p>
+                  )}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                <Button 
-                  onClick={handleGetRecommendations}
-                  size="lg"
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                >
-                  <Music className="h-5 w-5 mr-2" />
-                  Get My Recommendations 🎵
-                </Button>
+          <TabsContent value="recommendations" className="space-y-6">
+            <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-purple-900 dark:text-purple-100">
+                  <Sparkles className="h-5 w-5" />
+                  Your Personalized Recommendations ({recommendedSongs.length} songs)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {recommendedSongs.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Music className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-600 dark:text-gray-300 mb-2">
+                      No recommendations yet
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400 mb-6">
+                      Set your mood and get personalized song recommendations that you can play on Spotify
+                    </p>
+                    <Button
+                      onClick={() => document.querySelector('[value="discover"]')?.click()}
+                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                    >
+                      Start Discovering Music
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid gap-6">
+                    {recommendedSongs.map((song) => (
+                      <SongFeedback
+                        key={song.id}
+                        song={song}
+                        onFeedback={handleSongFeedback}
+                      />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                <div className="mt-4 text-sm text-gray-500">
-                  Languages: {includeEnglish && includeHindi ? 'English & Hindi' : 
-                             includeEnglish ? 'English Only' : 
-                             includeHindi ? 'Hindi Only' : 'None Selected'}
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="preferences">
-              <UserPreferences onPreferencesChange={handlePreferencesChange} />
-            </TabsContent>
-          </Tabs>
-        </div>
+          <TabsContent value="preferences">
+            <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-900 dark:text-green-100">
+                  <Settings className="h-5 w-5" />
+                  Your Music Preferences & Analytics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <UserPreferences onPreferencesChange={handlePreferencesChange} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

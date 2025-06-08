@@ -220,11 +220,11 @@ export const getRandomSongsByCategory = async (
   }
 };
 
-// Get recommended songs based on multiple categories and membership values
+// Get recommended songs based on multiple categories and membership values - Updated to return 20 songs
 export const getRecommendedSongs = async (
   primaryCategory: SongCategory,
   memberships: Record<SongCategory, number>,
-  count: number = 5,
+  count: number = 20, // Increased default to 20
   includeEnglish: boolean = true,
   includeHindi: boolean = true
 ): Promise<Song[]> => {
