@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Song, SongCategory } from '@/utils/fuzzyLogic';
 import { songDatabase } from '@/utils/songData';
-import { additionalSongs } from '@/utils/additionalSongs';
+import { allAdditionalSongs } from '@/utils/additionalSongs';
 
 export interface DatabaseSong {
   id: string;
@@ -45,7 +45,7 @@ export const populateDatabase = async (): Promise<void> => {
     // Combine all song collections - now just using the single additionalSongs array
     const allSongs = [
       ...songDatabase,
-      ...additionalSongs
+      ...allAdditionalSongs
     ];
 
     // Insert all songs
