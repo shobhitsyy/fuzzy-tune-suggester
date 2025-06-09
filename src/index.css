@@ -64,9 +64,19 @@
   * {
     @apply border-border;
   }
-  body {
+  
+  html {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  body {
+    @apply bg-background text-foreground min-h-screen;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  #root {
+    @apply min-h-screen bg-background;
   }
 }
 
@@ -75,9 +85,16 @@
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
 }
 
-/* Clean dark mode styling */
+/* Clean dark mode styling with full coverage */
 .dark {
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+html.dark,
+body.dark,
+#root.dark {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  min-height: 100vh;
 }
 
 /* Enhanced card styling for both modes */
@@ -96,20 +113,26 @@
   box-shadow: 0 8px 25px hsla(0 0% 0% / 0.3);
 }
 
-/* Glass effect for cards */
+/* Glass effect for cards with better mobile support */
 .glass-card {
   background: hsla(var(--card) / 0.8);
   backdrop-filter: blur(10px);
   border: 1px solid hsla(var(--border) / 0.5);
 }
 
-/* Tab styling improvements */
+@supports not (backdrop-filter: blur(10px)) {
+  .glass-card {
+    background: hsl(var(--card));
+  }
+}
+
+/* Tab styling improvements for mobile */
 .dark [data-state="active"] {
   background: hsl(var(--secondary));
   color: hsl(var(--secondary-foreground));
 }
 
-/* Improved button styling */
+/* Improved button styling for mobile */
 .mood-slider [data-orientation="horizontal"] {
   background: hsl(var(--secondary));
 }
@@ -118,7 +141,7 @@
   background: hsl(var(--primary));
 }
 
-/* Enhanced focus states */
+/* Enhanced focus states for accessibility */
 *:focus-visible {
   outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
@@ -139,9 +162,15 @@
   animation: fade-in 0.5s ease-out;
 }
 
-/* Scrollbar styling */
+/* Mobile-optimized scrollbar styling */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+}
+
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
 }
 
 ::-webkit-scrollbar-track {
@@ -155,4 +184,58 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--foreground));
+}
+
+/* Mobile responsive improvements */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .glass-card {
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+  }
+}
+
+/* Ensure full height coverage for dark mode */
+html.dark {
+  background-attachment: fixed;
+}
+
+/* Touch-friendly button sizes for mobile */
+@media (max-width: 768px) {
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  [role="tablist"] button {
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Improved card layouts for mobile */
+@media (max-width: 640px) {
+  .grid {
+    gap: 1rem;
+  }
+}
+
+/* Dark mode override for entire viewport */
+.dark {
+  color-scheme: dark;
+}
+
+.dark * {
+  border-color: hsl(var(--border));
+}
+
+/* Ensure proper dark mode background for the root elements */
+.dark html,
+.dark body,
+.dark #root {
+  background-color: hsl(var(--background)) !important;
+  background-image: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
 }
