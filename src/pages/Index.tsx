@@ -39,7 +39,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState('discover');
   const [preferences, setPreferences] = useState<UserPreferencesType>({
     defaultLanguage: 'both' as 'English' | 'Hindi' | 'both',
-    recommendationCount: 20,
+    recommendationCount: 25,
     favoriteGenres: [] as string[],
     excludedGenres: [] as string[],
     discoveryMode: 'balanced' as 'balanced' | 'adventurous' | 'safe',
@@ -100,6 +100,18 @@ const Index = () => {
     }
   };
 
+  // Calculate dynamic recommendation count based on mood and available songs
+  const getDynamicRecommendationCount = (category: any, memberships: any) => {
+    const baseCount = 20; // Minimum count
+    const maxCount = 50; // Maximum count
+    
+    // Calculate based on mood intensity - higher energy/valence = more songs
+    const moodIntensity = (currentMood.activity + currentMood.mood) / 10;
+    const dynamicCount = Math.round(baseCount + (moodIntensity * 15));
+    
+    return Math.min(Math.max(dynamicCount, baseCount), maxCount);
+  };
+
   const handleGetRecommendations = async () => {
     if (!dbInitialized) {
       toast({
@@ -114,12 +126,15 @@ const Index = () => {
     
     try {
       const { category, memberships } = determineSongCategory(currentMood);
+      const dynamicCount = getDynamicRecommendationCount(category, memberships);
+      
       console.log('Getting recommendations for category:', category, 'with memberships:', memberships);
+      console.log('Dynamic recommendation count:', dynamicCount);
       
       const songs = await getRecommendedSongs(
         category, 
         memberships, 
-        preferences.recommendationCount,
+        dynamicCount,
         includeEnglish,
         includeHindi
       );
@@ -191,40 +206,45 @@ const Index = () => {
     setSelectedSong(song);
   };
 
+  const getDynamicSongCount = () => {
+    if (recommendedSongs.length === 0) return "20+ songs";
+    return `${recommendedSongs.length} songs`;
+  };
+
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
-      <div className="container mx-auto px-4 py-4 md:py-8">
-        <div className="text-center mb-6 md:mb-8">
-          <h1 className="text-3xl md:text-6xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent mb-2 md:mb-4">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8 max-w-7xl">
+        {/* Header - Mobile Optimized */}
+        <div className="text-center mb-6 md:mb-8 px-2">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent mb-2 md:mb-4 leading-tight">
             MoodTunes
           </h1>
-          <p className="text-base md:text-xl text-muted-foreground max-w-2xl mx-auto px-2">
+          <p className="text-sm sm:text-base md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             Discover music that perfectly matches your mood. Get personalized recommendations and explore new songs on Spotify.
           </p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6 md:mb-8 bg-card/50 backdrop-blur-sm border border-border">
-            <TabsTrigger value="discover" className="flex items-center gap-2 text-sm md:text-base">
-              <Music className="h-4 w-4" />
-              <span className="hidden sm:inline">Discover</span>
+          <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6 md:mb-8 bg-card/50 backdrop-blur-sm border border-border h-12 sm:h-14">
+            <TabsTrigger value="discover" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm md:text-base py-2 sm:py-3">
+              <Music className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span>Discover</span>
             </TabsTrigger>
-            <TabsTrigger value="recommendations" className="flex items-center gap-2 text-sm md:text-base">
-              <Sparkles className="h-4 w-4" />
-              <span className="hidden sm:inline">Your Music</span>
-              <span className="sm:hidden">Music</span>
+            <TabsTrigger value="recommendations" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm md:text-base py-2 sm:py-3">
+              <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span>Your Music</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="discover" className="space-y-6 md:space-y-8">
-            <Card className="glass-card shadow-xl">
-              <CardHeader className="text-center pb-4 md:pb-6">
-                <CardTitle className="text-xl md:text-2xl font-bold text-foreground flex items-center justify-center gap-2">
-                  <Heart className="h-5 w-5 md:h-6 md:w-6 text-red-500" />
-                  How are you feeling today?
+          <TabsContent value="discover" className="space-y-4 sm:space-y-6 md:space-y-8">
+            <Card className="glass-card shadow-xl border-0 rounded-2xl overflow-hidden">
+              <CardHeader className="text-center pb-3 sm:pb-4 md:pb-6 px-4 sm:px-6">
+                <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold text-foreground flex items-center justify-center gap-2 leading-tight">
+                  <Heart className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-red-500 flex-shrink-0" />
+                  <span>How are you feeling today?</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="px-4 md:px-6">
+              <CardContent className="px-3 sm:px-4 md:px-6 pb-6 sm:pb-8">
                 <EnhancedMoodSelector
                   moodParams={currentMood}
                   onMoodChange={setCurrentMood}
@@ -232,27 +252,27 @@ const Index = () => {
                   includeHindi={includeHindi}
                   onLanguageChange={handleLanguageChange}
                 />
-                <div className="text-center mt-6 md:mt-8">
+                <div className="text-center mt-6 sm:mt-8">
                   <Button
                     onClick={handleGetRecommendations}
                     disabled={isLoading || !dbInitialized}
                     size="lg"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 md:px-8 py-3 md:py-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 w-full sm:w-auto"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-4 sm:px-6 md:px-8 py-3 sm:py-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 w-full sm:w-auto text-sm sm:text-base min-h-[48px]"
                   >
                     {isLoading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 md:h-5 md:w-5 border-b-2 border-primary-foreground mr-2"></div>
-                        <span className="text-sm md:text-base">Finding Your Perfect Songs...</span>
-                      </>
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-primary-foreground"></div>
+                        <span className="text-xs sm:text-sm md:text-base">Finding Your Perfect Songs...</span>
+                      </div>
                     ) : (
-                      <>
-                        <Sparkles className="h-4 w-4 md:h-5 md:w-5 mr-2" />
-                        <span className="text-sm md:text-base">Get My Recommendations ({preferences.recommendationCount} songs)</span>
-                      </>
+                      <div className="flex items-center justify-center gap-2">
+                        <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                        <span className="text-xs sm:text-sm md:text-base">Get My Recommendations ({getDynamicSongCount()})</span>
+                      </div>
                     )}
                   </Button>
                   {!dbInitialized && (
-                    <p className="text-xs md:text-sm text-muted-foreground mt-2">
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-2 px-4">
                       Initializing song database...
                     </p>
                   )}
@@ -261,33 +281,33 @@ const Index = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="recommendations" className="space-y-4 md:space-y-6">
-            <Card className="glass-card shadow-xl">
-              <CardHeader className="pb-4 md:pb-6">
-                <CardTitle className="flex items-center gap-2 text-foreground text-lg md:text-xl">
-                  <Sparkles className="h-5 w-5" />
-                  Your Personalized Recommendations ({recommendedSongs.length} songs)
+          <TabsContent value="recommendations" className="space-y-4 sm:space-y-6">
+            <Card className="glass-card shadow-xl border-0 rounded-2xl overflow-hidden">
+              <CardHeader className="pb-3 sm:pb-4 md:pb-6 px-4 sm:px-6">
+                <CardTitle className="flex items-center gap-2 text-foreground text-base sm:text-lg md:text-xl">
+                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                  <span>Your Personalized Recommendations ({recommendedSongs.length} songs)</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="px-4 md:px-6">
+              <CardContent className="px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">
                 {recommendedSongs.length === 0 ? (
-                  <div className="text-center py-8 md:py-12">
-                    <Music className="h-12 w-12 md:h-16 md:w-16 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-base md:text-lg font-medium text-foreground mb-2">
+                  <div className="text-center py-8 sm:py-12 px-4">
+                    <Music className="h-12 w-12 sm:h-16 sm:w-16 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-base sm:text-lg md:text-xl font-medium text-foreground mb-2">
                       No recommendations yet
                     </h3>
-                    <p className="text-sm md:text-base text-muted-foreground mb-4 md:mb-6 px-4">
+                    <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6 leading-relaxed">
                       Set your mood and get personalized song recommendations that you can play on Spotify
                     </p>
                     <Button
                       onClick={() => handleTabClick('discover')}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 text-sm sm:text-base min-h-[44px]"
                     >
                       Start Discovering Music
                     </Button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
                     {recommendedSongs.map((song) => (
                       <SongCard
                         key={song.id}
