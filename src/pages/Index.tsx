@@ -212,39 +212,45 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background transition-colors duration-300">
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8 max-w-7xl">
-        {/* Header - Mobile Optimized */}
-        <div className="text-center mb-6 md:mb-8 px-2">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent mb-2 md:mb-4 leading-tight">
-            MoodTunes
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl md:text-6xl font-bold text-gray-800 mb-4">
+            Music Mood Generator
           </h1>
-          <p className="text-sm sm:text-base md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Discover music that perfectly matches your mood. Get personalized recommendations and explore new songs on Spotify.
+          <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
+            Discover personalized music recommendations based on your current mood and activity.
           </p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6 md:mb-8 bg-card/50 backdrop-blur-sm border border-border h-12 sm:h-14">
-            <TabsTrigger value="discover" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm md:text-base py-2 sm:py-3">
-              <Music className="h-3 w-3 sm:h-4 sm:w-4" />
+          <TabsList className="grid w-full grid-cols-2 mb-6 bg-white shadow-sm rounded-xl h-14">
+            <TabsTrigger 
+              value="discover" 
+              className="flex items-center gap-2 text-sm md:text-base py-3 px-4 rounded-lg data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+            >
+              <Music className="h-4 w-4" />
               <span>Discover</span>
             </TabsTrigger>
-            <TabsTrigger value="recommendations" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm md:text-base py-2 sm:py-3">
-              <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span>Your Music</span>
+            <TabsTrigger 
+              value="recommendations" 
+              className="flex items-center gap-2 text-sm md:text-base py-3 px-4 rounded-lg data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+            >
+              <Sparkles className="h-4 w-4" />
+              <span>Your Music Recommendations</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="discover" className="space-y-4 sm:space-y-6 md:space-y-8">
-            <Card className="glass-card shadow-xl border-0 rounded-2xl overflow-hidden">
-              <CardHeader className="text-center pb-3 sm:pb-4 md:pb-6 px-4 sm:px-6">
-                <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold text-foreground flex items-center justify-center gap-2 leading-tight">
-                  <Heart className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-red-500 flex-shrink-0" />
+          <TabsContent value="discover" className="space-y-6">
+            <Card className="bg-white shadow-lg rounded-2xl border-0">
+              <CardHeader className="text-center pb-4">
+                <CardTitle className="text-xl md:text-2xl font-bold text-gray-800 flex items-center justify-center gap-2">
+                  <Heart className="h-5 w-5 md:h-6 md:w-6 text-red-500" />
                   <span>How are you feeling today?</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="px-3 sm:px-4 md:px-6 pb-6 sm:pb-8">
+              <CardContent className="px-4 md:px-6 pb-8">
                 <EnhancedMoodSelector
                   moodParams={currentMood}
                   onMoodChange={setCurrentMood}
@@ -252,27 +258,27 @@ const Index = () => {
                   includeHindi={includeHindi}
                   onLanguageChange={handleLanguageChange}
                 />
-                <div className="text-center mt-6 sm:mt-8">
+                <div className="text-center mt-8">
                   <Button
                     onClick={handleGetRecommendations}
                     disabled={isLoading || !dbInitialized}
                     size="lg"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-4 sm:px-6 md:px-8 py-3 sm:py-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 w-full sm:w-auto text-sm sm:text-base min-h-[48px]"
+                    className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 w-full md:w-auto text-base min-h-[56px]"
                   >
                     {isLoading ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-primary-foreground"></div>
-                        <span className="text-xs sm:text-sm md:text-base">Finding Your Perfect Songs...</span>
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        <span>Finding Your Perfect Songs...</span>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-center gap-2">
-                        <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                        <span className="text-xs sm:text-sm md:text-base">Get My Recommendations ({getDynamicSongCount()})</span>
+                      <div className="flex items-center justify-center gap-3">
+                        <Sparkles className="h-5 w-5" />
+                        <span>Generate Music Recommendations</span>
                       </div>
                     )}
                   </Button>
                   {!dbInitialized && (
-                    <p className="text-xs sm:text-sm text-muted-foreground mt-2 px-4">
+                    <p className="text-sm text-gray-500 mt-3">
                       Initializing song database...
                     </p>
                   )}
@@ -281,33 +287,48 @@ const Index = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="recommendations" className="space-y-4 sm:space-y-6">
-            <Card className="glass-card shadow-xl border-0 rounded-2xl overflow-hidden">
-              <CardHeader className="pb-3 sm:pb-4 md:pb-6 px-4 sm:px-6">
-                <CardTitle className="flex items-center gap-2 text-foreground text-base sm:text-lg md:text-xl">
-                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                  <span>Your Personalized Recommendations ({recommendedSongs.length} songs)</span>
+          <TabsContent value="recommendations" className="space-y-6">
+            <Card className="bg-white shadow-lg rounded-2xl border-0">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-gray-800 text-lg md:text-xl">
+                  <Sparkles className="h-5 w-5" />
+                  <span>Your Music Recommendations</span>
+                  {recommendedSongs.length > 0 && (
+                    <span className="text-sm text-gray-500 ml-2">
+                      ({recommendedSongs.length} songs)
+                    </span>
+                  )}
                 </CardTitle>
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => setActiveTab('discover')}
+                    variant="outline"
+                    size="sm"
+                    className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                  >
+                    Adjust Mood
+                  </Button>
+                </div>
               </CardHeader>
-              <CardContent className="px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">
+              <CardContent className="px-4 md:px-6 pb-6">
                 {recommendedSongs.length === 0 ? (
-                  <div className="text-center py-8 sm:py-12 px-4">
-                    <Music className="h-12 w-12 sm:h-16 sm:w-16 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-base sm:text-lg md:text-xl font-medium text-foreground mb-2">
+                  <div className="text-center py-12">
+                    <Music className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                    <h3 className="text-lg md:text-xl font-medium text-gray-600 mb-2">
                       No recommendations yet
                     </h3>
-                    <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6 leading-relaxed">
+                    <p className="text-gray-500 mb-6 text-sm md:text-base">
                       Set your mood and get personalized song recommendations that you can play on Spotify
                     </p>
                     <Button
-                      onClick={() => handleTabClick('discover')}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 text-sm sm:text-base min-h-[44px]"
+                      onClick={() => setActiveTab('discover')}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3"
                     >
                       Start Discovering Music
                     </Button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {recommendedSongs.map((song) => (
                       <SongCard
                         key={song.id}
