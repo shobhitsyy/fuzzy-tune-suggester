@@ -1,14 +1,6 @@
 
 import React, { useState } from "react";
 
-// Settings for mild access restriction (improvement: edit this to your specs!)
-const isLaptopDevice = () => {
-  const laptopHosts = ["localhost", "127.0.0.1", "your-laptop-hostname.local"];
-  const curHost = window.location.hostname;
-  // Update "your-laptop-hostname.local" if needed
-  return laptopHosts.includes(curHost);
-};
-
 const Discovery: React.FC = () => {
   const [language, setLanguage] = useState<'English' | 'Hindi' | 'Both'>('Both');
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,18 +9,6 @@ const Discovery: React.FC = () => {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState(0);
-
-  // Mild device restriction
-  if (!isLaptopDevice()) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="p-6 bg-white border rounded-xl shadow-lg">
-          <h2 className="font-bold text-lg mb-2">Discovery Page Restricted</h2>
-          <p className="text-sm">Access to the discovery page is only permitted from your laptop.</p>
-        </div>
-      </div>
-    );
-  }
 
   // This should match your deployed edge function
   const edgeFunctionUrl = "https://zqtdyfzxzatzymyfitqg.supabase.co/functions/v1/fetch-and-enrich-songs";
@@ -158,4 +138,3 @@ const Discovery: React.FC = () => {
 };
 
 export default Discovery;
-
