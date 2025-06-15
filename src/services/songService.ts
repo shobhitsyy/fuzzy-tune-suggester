@@ -1,13 +1,14 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Song, SongCategoryType } from '@/utils/fuzzyLogic';
 
+// Use string for languages, not just 'English' | 'Hindi'
 export interface DatabaseSong {
   id: string;
   title: string;
   artist: string;
   album: string;
   release_date: string;
-  language: 'English' | 'Hindi';
+  language: string; // <-- Accept any string, as in DB
   category: SongCategoryType;
   cover_image: string | null;
   duration: string;
@@ -26,7 +27,7 @@ export const getRecommendedSongs = async (
   includeHindi: boolean = true
 ) => {
   try {
-    let languages: ('English' | 'Hindi')[] = [];
+    let languages: string[] = [];
     if (includeEnglish) languages.push('English');
     if (includeHindi) languages.push('Hindi');
     if (!languages.length) return [];
@@ -74,7 +75,7 @@ export const getRecommendedSongs = async (
   }
 };
 
-// Transform database song to application song format
+// Accept string for language
 const transformDatabaseSongToSong = (dbSong: DatabaseSong): Song => {
   return {
     id: dbSong.id,
@@ -96,7 +97,7 @@ const transformDatabaseSongToSong = (dbSong: DatabaseSong): Song => {
 // Get songs by category and language
 export const getSongsByCategory = async (
   category: SongCategoryType, 
-  language?: 'English' | 'Hindi'
+  language?: string
 ): Promise<Song[]> => {
   try {
     console.log('Fetching songs by category:', category, 'language:', language);
@@ -197,7 +198,7 @@ export const isDatabasePopulated = async (): Promise<boolean> => {
 export const getRandomSongsByCategory = async (
   category: SongCategoryType, 
   count: number = 3, 
-  language?: 'English' | 'Hindi'
+  language?: string
 ): Promise<Song[]> => {
   try {
     console.log('Fetching random songs by category:', category, 'count:', count, 'language:', language);
