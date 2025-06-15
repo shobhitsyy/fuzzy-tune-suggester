@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -335,7 +334,6 @@ const Index = () => {
                         key={song.id}
                         song={song}
                         onClick={handleSongSelect}
-                        onFeedback={handleSongFeedback}
                       />
                     ))}
                   </div>
