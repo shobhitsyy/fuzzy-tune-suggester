@@ -1,283 +1,212 @@
 
+import { spotifyService } from './spotifyService';
 import { supabase } from '@/integrations/supabase/client';
-import { spotifyService, SpotifyTrack } from '@/services/spotifyService';
-import { Song, SongCategory } from '@/utils/fuzzyLogic';
+import { SongCategory } from '@/utils/fuzzyLogic';
 
-interface SpotifyAudioFeatures {
-  energy: number;
-  valence: number;
-  danceability: number;
-  acousticness: number;
-  instrumentalness: number;
-  speechiness: number;
-  tempo: number;
-}
-
-interface EnrichmentResult {
-  updated: number;
-  newSongs: number;
-  errors: number;
-}
-
-export class SpotifyDatabaseService {
+// Audio features mapping to our song categories
+const getAudioFeatureCategories = (features: any): SongCategory[] => {
+  const categories: SongCategory[] = [];
   
-  // Enrich existing songs with Spotify data
-  async enrichExistingSongs(batchSize: number = 10): Promise<EnrichmentResult> {
-    const result: EnrichmentResult = { updated: 0, newSongs: 0, errors: 0 };
-    
-    try {
-      // Get songs without Spotify URLs or with incomplete data
-      const { data: songsToEnrich, error } = await supabase
-        .from('songs')
-        .select('*')
-        .or('spotify_url.is.null,cover_image.is.null')
-        .limit(batchSize);
-
-      if (error) throw error;
-      if (!songsToEnrich || songsToEnrich.length === 0) {
-        console.log('No songs need enrichment');
-        return result;
-      }
-
-      console.log(`Enriching ${songsToEnrich.length} songs with Spotify data...`);
-
-      for (const song of songsToEnrich) {
-        try {
-          // Search for the song on Spotify
-          const searchQuery = `track:"${song.title}" artist:"${song.artist}"`;
-          const searchResults = await this.searchSpotifyTrack(searchQuery);
-          
-          if (searchResults.length > 0) {
-            const spotifyTrack = searchResults[0];
-            const audioFeatures = await this.getTrackAudioFeatures(spotifyTrack.id);
-            
-            // Update the song with Spotify data
-            const updateData: any = {
-              spotify_url: spotifyTrack.external_urls.spotify,
-              cover_image: spotifyTrack.album.images[0]?.url || song.cover_image,
-              updated_at: new Date().toISOString()
-            };
-
-            // Add audio features to tags if available
-            if (audioFeatures) {
-              const audioTags = this.generateAudioFeatureTags(audioFeatures);
-              updateData.tags = [...new Set([...(song.tags || []), ...audioTags])];
-            }
-
-            const { error: updateError } = await supabase
-              .from('songs')
-              .update(updateData)
-              .eq('id', song.id);
-
-            if (updateError) throw updateError;
-            
-            result.updated++;
-            console.log(`Updated: ${song.title} by ${song.artist}`);
-            
-            // Rate limiting - wait between requests
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
-        } catch (error) {
-          console.error(`Error enriching song ${song.title}:`, error);
-          result.errors++;
-        }
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Error in enrichExistingSongs:', error);
-      throw error;
-    }
+  // High energy + high valence = energetic
+  if (features.energy > 0.7 && features.valence > 0.6) {
+    categories.push('energetic');
   }
-
-  // Discover and add new songs based on existing songs in the database
-  async discoverNewSongs(category: SongCategory, count: number = 20): Promise<EnrichmentResult> {
-    const result: EnrichmentResult = { updated: 0, newSongs: 0, errors: 0 };
-    
-    try {
-      // Get existing songs from the category to use as seeds
-      const { data: seedSongs, error } = await supabase
-        .from('songs')
-        .select('*')
-        .eq('category', category)
-        .not('spotify_url', 'is', null)
-        .limit(5);
-
-      if (error) throw error;
-      if (!seedSongs || seedSongs.length === 0) {
-        console.log(`No seed songs found for category: ${category}`);
-        return result;
-      }
-
-      // Extract Spotify track IDs from seed songs
-      const seedTrackIds = seedSongs
-        .map(song => this.extractSpotifyTrackId(song.spotify_url))
-        .filter(Boolean)
-        .slice(0, 5);
-
-      if (seedTrackIds.length === 0) {
-        console.log('No valid Spotify track IDs found in seed songs');
-        return result;
-      }
-
-      // Get recommendations from Spotify
-      const recommendations = await this.getSpotifyRecommendations(seedTrackIds, count);
-      
-      for (const track of recommendations) {
-        try {
-          // Check if song already exists
-          const { data: existingSong } = await supabase
-            .from('songs')
-            .select('id')
-            .eq('spotify_url', track.external_urls.spotify)
-            .single();
-
-          if (!existingSong) {
-            // Get audio features for better categorization
-            const audioFeatures = await this.getTrackAudioFeatures(track.id);
-            const newSong = this.convertSpotifyTrackToSong(track, category, audioFeatures);
-            
-            const { error: insertError } = await supabase
-              .from('songs')
-              .insert(newSong);
-
-            if (insertError) throw insertError;
-            
-            result.newSongs++;
-            console.log(`Added new song: ${track.name} by ${track.artists[0].name}`);
-          }
-          
-          // Rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } catch (error) {
-          console.error(`Error adding song ${track.name}:`, error);
-          result.errors++;
-        }
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Error in discoverNewSongs:', error);
-      throw error;
-    }
+  
+  // Medium energy + high valence = upbeat
+  if (features.energy > 0.5 && features.energy <= 0.7 && features.valence > 0.5) {
+    categories.push('upbeat');
   }
+  
+  // Medium energy + medium valence = moderate
+  if (features.energy > 0.3 && features.energy <= 0.6 && features.valence > 0.3 && features.valence <= 0.6) {
+    categories.push('moderate');
+  }
+  
+  // Low energy + medium valence = relaxed
+  if (features.energy <= 0.4 && features.valence > 0.3 && features.valence <= 0.6) {
+    categories.push('relaxed');
+  }
+  
+  // Low energy + low valence = calm
+  if (features.energy <= 0.3 && features.valence <= 0.4) {
+    categories.push('calm');
+  }
+  
+  // Default to moderate if no category matches
+  return categories.length > 0 ? categories : ['moderate'];
+};
 
-  // Update all song categories with fresh Spotify recommendations
-  async updateAllCategories(): Promise<Record<SongCategory, EnrichmentResult>> {
-    const categories: SongCategory[] = ['happy', 'sad', 'energetic', 'calm', 'romantic', 'motivational'];
-    const results: Record<SongCategory, EnrichmentResult> = {} as Record<SongCategory, EnrichmentResult>;
+// Search for songs on Spotify and get their data
+const searchSpotifyForSong = async (title: string, artist: string) => {
+  try {
+    const query = `track:"${title}" artist:"${artist}"`;
+    const results = await spotifyService.searchTracks(query, 1);
+    
+    if (results.tracks.items.length > 0) {
+      const track = results.tracks.items[0];
+      return {
+        spotifyId: track.id,
+        spotifyUrl: track.external_urls.spotify,
+        coverImage: track.album.images[0]?.url || '/placeholder.svg',
+        audioFeatures: await spotifyService.getAudioFeatures(track.id)
+      };
+    }
+  } catch (error) {
+    console.error('Error searching Spotify:', error);
+  }
+  return null;
+};
 
-    for (const category of categories) {
+// Enrich existing songs with Spotify data
+export const enrichExistingSongs = async (batchSize: number = 50) => {
+  const results = { updated: 0, newSongs: 0, errors: 0 };
+  
+  try {
+    // Get songs that don't have Spotify data
+    const { data: songs, error } = await supabase
+      .from('songs')
+      .select('*')
+      .is('spotify_url', null)
+      .limit(batchSize);
+
+    if (error) throw error;
+
+    for (const song of songs || []) {
       try {
-        console.log(`Updating category: ${category}`);
-        results[category] = await this.discoverNewSongs(category, 10);
+        const spotifyData = await searchSpotifyForSong(song.title, song.artist);
         
-        // Wait between categories to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } catch (error) {
-        console.error(`Error updating category ${category}:`, error);
-        results[category] = { updated: 0, newSongs: 0, errors: 1 };
-      }
-    }
+        if (spotifyData) {
+          // Determine categories based on audio features
+          const categories = spotifyData.audioFeatures 
+            ? getAudioFeatureCategories(spotifyData.audioFeatures)
+            : [song.category];
 
-    return results;
-  }
+          // Update the song with Spotify data
+          const { error: updateError } = await supabase
+            .from('songs')
+            .update({
+              spotify_url: spotifyData.spotifyUrl,
+              cover_image: spotifyData.coverImage,
+              category: categories[0] // Use primary category
+            })
+            .eq('id', song.id);
 
-  // Helper methods
-  private async searchSpotifyTrack(query: string): Promise<SpotifyTrack[]> {
-    try {
-      return await spotifyService.searchTracks({ 
-        mood: query,
-        limit: 5 
-      });
-    } catch (error) {
-      console.error('Spotify search error:', error);
-      return [];
-    }
-  }
-
-  private async getTrackAudioFeatures(trackId: string): Promise<SpotifyAudioFeatures | null> {
-    try {
-      const features = await spotifyService.getAudioFeatures([trackId]);
-      return features[0] || null;
-    } catch (error) {
-      console.error('Audio features error:', error);
-      return null;
-    }
-  }
-
-  private async getSpotifyRecommendations(seedTrackIds: string[], limit: number): Promise<SpotifyTrack[]> {
-    try {
-      const response = await fetch(
-        `https://api.spotify.com/v1/recommendations?seed_tracks=${seedTrackIds.join(',')}&limit=${limit}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${spotifyService['accessToken']}`
+          if (!updateError) {
+            results.updated++;
+          } else {
+            results.errors++;
+            console.error('Error updating song:', updateError);
           }
         }
-      );
+      } catch (error) {
+        results.errors++;
+        console.error('Error processing song:', song.title, error);
+      }
+    }
+  } catch (error) {
+    console.error('Error enriching songs:', error);
+    throw error;
+  }
 
-      if (!response.ok) throw new Error('Failed to get recommendations');
-      
-      const data = await response.json();
-      return data.tracks || [];
+  return results;
+};
+
+// Category-specific search terms for discovering new songs
+const categorySearchTerms: Record<SongCategory, string[]> = {
+  'calm': ['meditation', 'ambient', 'peaceful', 'sleep', 'chill', 'spa'],
+  'relaxed': ['acoustic', 'soft rock', 'folk', 'indie', 'mellow'],
+  'moderate': ['pop', 'alternative', 'indie pop', 'soft rock'],
+  'upbeat': ['dance', 'pop', 'funk', 'disco', 'party'],
+  'energetic': ['rock', 'electronic', 'workout', 'pump up', 'high energy']
+};
+
+// Discover new songs for a specific category
+const discoverSongsForCategory = async (category: SongCategory, limit: number = 20) => {
+  const results = { updated: 0, newSongs: 0, errors: 0 };
+  
+  try {
+    const searchTerms = categorySearchTerms[category];
+    const randomTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
+    
+    // Search for tracks
+    const searchResults = await spotifyService.searchTracks(randomTerm, limit);
+    
+    for (const track of searchResults.tracks.items) {
+      try {
+        // Check if song already exists
+        const { data: existingSong } = await supabase
+          .from('songs')
+          .select('id')
+          .eq('title', track.name)
+          .eq('artist', track.artists[0]?.name)
+          .single();
+
+        if (!existingSong) {
+          // Get audio features to better categorize
+          const audioFeatures = await spotifyService.getAudioFeatures(track.id);
+          const categories = audioFeatures ? getAudioFeatureCategories(audioFeatures) : [category];
+          
+          // Add new song
+          const { error: insertError } = await supabase
+            .from('songs')
+            .insert({
+              title: track.name,
+              artist: track.artists[0]?.name || 'Unknown Artist',
+              album: track.album.name,
+              release_date: track.album.release_date || '2023-01-01',
+              language: 'English', // Default for Spotify tracks
+              category: categories[0],
+              cover_image: track.album.images[0]?.url || '/placeholder.svg',
+              duration: `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
+              spotify_url: track.external_urls.spotify,
+              tags: [category, track.artists[0]?.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown'],
+              description: `${track.name} by ${track.artists[0]?.name} - A ${category} track perfect for your mood.`
+            });
+
+          if (!insertError) {
+            results.newSongs++;
+          } else {
+            results.errors++;
+            console.error('Error inserting song:', insertError);
+          }
+        } else {
+          results.updated++;
+        }
+      } catch (error) {
+        results.errors++;
+        console.error('Error processing track:', track.name, error);
+      }
+    }
+  } catch (error) {
+    console.error(`Error discovering songs for ${category}:`, error);
+    throw error;
+  }
+
+  return results;
+};
+
+// Update all categories with new songs
+export const updateAllCategories = async () => {
+  const categoryResults: Record<SongCategory, any> = {} as Record<SongCategory, any>;
+  
+  const categories: SongCategory[] = ['calm', 'relaxed', 'moderate', 'upbeat', 'energetic'];
+  
+  for (const category of categories) {
+    try {
+      categoryResults[category] = await discoverSongsForCategory(category, 10);
+      // Add delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
-      console.error('Recommendations error:', error);
-      return [];
+      console.error(`Error updating category ${category}:`, error);
+      categoryResults[category] = { updated: 0, newSongs: 0, errors: 1 };
     }
   }
+  
+  return categoryResults;
+};
 
-  private extractSpotifyTrackId(spotifyUrl: string | null): string | null {
-    if (!spotifyUrl) return null;
-    const match = spotifyUrl.match(/track\/([a-zA-Z0-9]+)/);
-    return match ? match[1] : null;
-  }
-
-  private generateAudioFeatureTags(features: SpotifyAudioFeatures): string[] {
-    const tags: string[] = [];
-    
-    if (features.energy > 0.7) tags.push('high-energy');
-    if (features.energy < 0.3) tags.push('low-energy');
-    if (features.valence > 0.7) tags.push('positive');
-    if (features.valence < 0.3) tags.push('melancholic');
-    if (features.danceability > 0.7) tags.push('danceable');
-    if (features.acousticness > 0.7) tags.push('acoustic');
-    if (features.instrumentalness > 0.5) tags.push('instrumental');
-    
-    return tags;
-  }
-
-  private convertSpotifyTrackToSong(
-    track: SpotifyTrack, 
-    category: SongCategory, 
-    audioFeatures: SpotifyAudioFeatures | null
-  ): any {
-    const tags = ['spotify'];
-    if (audioFeatures) {
-      tags.push(...this.generateAudioFeatureTags(audioFeatures));
-    }
-
-    return {
-      id: `spotify_${track.id}`,
-      title: track.name,
-      artist: track.artists.map(a => a.name).join(', '),
-      album: track.album.name,
-      release_date: track.album.release_date || '2024-01-01',
-      language: 'English', // Default, could be improved with language detection
-      category,
-      cover_image: track.album.images[0]?.url || '',
-      duration: this.formatDuration(track.duration_ms),
-      spotify_url: track.external_urls.spotify,
-      tags,
-      description: `Discovered via Spotify recommendations. ${audioFeatures ? `Energy: ${Math.round(audioFeatures.energy * 100)}%, Mood: ${Math.round(audioFeatures.valence * 100)}%` : ''}`
-    };
-  }
-
-  private formatDuration(ms: number): string {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  }
-}
-
-export const spotifyDatabaseService = new SpotifyDatabaseService();
+export const spotifyDatabaseService = {
+  enrichExistingSongs,
+  updateAllCategories,
+  discoverSongsForCategory
+};

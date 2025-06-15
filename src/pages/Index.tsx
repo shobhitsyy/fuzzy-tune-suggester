@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Heart, Activity, Music, Info } from 'lucide-react';
 import { calculateMembership, SongCategory, Song } from '@/utils/fuzzyLogic';
 import SongCard from '@/components/SongCard';
-import SongDetailsDialog from '@/components/SongDetailsDialog';
+import SongDetail from '@/components/SongDetail';
 import { useToast } from '@/hooks/use-toast';
 import { getRecommendedSongs, isDatabasePopulated, populateDatabase } from '@/services/songService';
 import SpotifyIntegration from '@/components/SpotifyIntegration';
@@ -82,11 +83,11 @@ const Index = () => {
       const memberships = calculateMembership(heartRate, activity, mood);
       
       // Find the primary category (highest membership value)
-      let primaryCategory: SongCategory = 'happy';
+      let primaryCategory: SongCategory = 'moderate';
       let maxMembership = 0;
       
       Object.entries(memberships).forEach(([category, value]) => {
-        if (value > maxMembership) {
+        if (typeof value === 'number' && value > maxMembership) {
           maxMembership = value;
           primaryCategory = category as SongCategory;
         }
@@ -374,9 +375,12 @@ const Index = () => {
         )}
 
         {/* Song Details Dialog */}
-        {selectedSong && (
-          <SongDetailsDialog song={selectedSong} open={!!selectedSong} onClose={handleCloseDialog} />
-        )}
+        <SongDetail 
+          song={selectedSong} 
+          isOpen={!!selectedSong} 
+          onClose={handleCloseDialog}
+          onSelectSimilar={handleSongClick}
+        />
       </div>
     </div>
   );

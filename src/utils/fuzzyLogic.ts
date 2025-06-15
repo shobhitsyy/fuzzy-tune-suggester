@@ -25,13 +25,25 @@ export interface Song {
 }
 
 // Song genre/type categories
-export enum SongCategory {
-  CALM = "Calm",
-  RELAXED = "Relaxed",
-  Moderate = "Moderate",
-  Upbeat = "Upbeat",
-  Energetic = "Energetic"
-}
+export type SongCategory = 'calm' | 'relaxed' | 'moderate' | 'upbeat' | 'energetic';
+
+// Helper function to calculate membership values
+export const calculateMembership = (heartRate: number, activity: number, mood: number) => {
+  const params: MoodParams = {
+    heartRate,
+    timeOfDay: new Date().getHours(),
+    activity,
+    mood
+  };
+
+  return {
+    calm: calmMembership(params),
+    relaxed: relaxedMembership(params),
+    moderate: moderateMembership(params),
+    upbeat: upbeatMembership(params),
+    energetic: energeticMembership(params)
+  };
+};
 
 // Helper function to map time of day to a 0-1 scale with peaks for different times
 const timeOfDayFactor = (time: number): number => {
@@ -65,8 +77,8 @@ const relaxedMembership = (params: MoodParams): number => {
   return (heartRateFactor * 0.3 + activityFactor * 0.3 + moodFactor * 0.4);
 };
 
-// Calculate membership in the "Moderate" category
-const ModerateMembership = (params: MoodParams): number => {
+// Calculate membership in the "moderate" category
+const moderateMembership = (params: MoodParams): number => {
   const heartRateFactor = Math.max(0, 1 - Math.abs(params.heartRate - 80) / 20);
   const activityFactor = Math.max(0, 1 - Math.abs(params.activity - 5) / 3);
   const moodFactor = Math.max(0, 1 - Math.abs(params.mood - 5) / 3);
@@ -74,8 +86,8 @@ const ModerateMembership = (params: MoodParams): number => {
   return (heartRateFactor * 0.3 + activityFactor * 0.3 + moodFactor * 0.4);
 };
 
-// Calculate membership in the "Upbeat" category
-const UpbeatMembership = (params: MoodParams): number => {
+// Calculate membership in the "upbeat" category
+const upbeatMembership = (params: MoodParams): number => {
   const heartRateFactor = Math.max(0, 1 - Math.abs(params.heartRate - 90) / 20);
   const activityFactor = Math.max(0, 1 - Math.abs(params.activity - 7) / 3);
   const moodFactor = Math.max(0, 1 - Math.abs(params.mood - 7) / 3);
@@ -83,8 +95,8 @@ const UpbeatMembership = (params: MoodParams): number => {
   return (heartRateFactor * 0.3 + activityFactor * 0.3 + moodFactor * 0.4);
 };
 
-// Calculate membership in the "Energetic" category
-const EnergeticMembership = (params: MoodParams): number => {
+// Calculate membership in the "energetic" category
+const energeticMembership = (params: MoodParams): number => {
   const heartRateFactor = Math.min(1, Math.max(0, (params.heartRate - 85) / 25));
   const activityFactor = Math.min(1, Math.max(0, (params.activity - 7) / 3));
   const moodFactor = Math.min(1, Math.max(0, (params.mood - 7) / 3));
@@ -101,16 +113,16 @@ export const determineSongCategory = (params: MoodParams): {
   const timeFactor = timeOfDayFactor(params.timeOfDay);
   
   // Calculate memberships for each category
-  const memberships = {
-    [SongCategory.CALM]: calmMembership(params) * (params.timeOfDay >= 20 || params.timeOfDay <= 7 ? 1.2 : 1),
-    [SongCategory.RELAXED]: relaxedMembership(params),
-    [SongCategory.Moderate]: ModerateMembership(params),
-    [SongCategory.Upbeat]: UpbeatMembership(params) * (params.timeOfDay >= 8 && params.timeOfDay <= 20 ? 1.2 : 1),
-    [SongCategory.Energetic]: EnergeticMembership(params) * (params.timeOfDay >= 10 && params.timeOfDay <= 18 ? 1.2 : 1)
+  const memberships: Record<SongCategory, number> = {
+    calm: calmMembership(params) * (params.timeOfDay >= 20 || params.timeOfDay <= 7 ? 1.2 : 1),
+    relaxed: relaxedMembership(params),
+    moderate: moderateMembership(params),
+    upbeat: upbeatMembership(params) * (params.timeOfDay >= 8 && params.timeOfDay <= 20 ? 1.2 : 1),
+    energetic: energeticMembership(params) * (params.timeOfDay >= 10 && params.timeOfDay <= 18 ? 1.2 : 1)
   };
   
   // Find category with highest membership
-  let maxCategory = SongCategory.Moderate;
+  let maxCategory: SongCategory = 'moderate';
   let maxValue = 0;
   
   Object.entries(memberships).forEach(([category, value]) => {
