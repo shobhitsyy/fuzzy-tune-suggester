@@ -2,10 +2,11 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Music, Heart, Zap } from "lucide-react";
+import { Sparkles, Music, Heart, Zap, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { spotifyDatabaseService } from "@/services/spotifyDatabaseService";
+import { supabase } from "@/integrations/supabase/client";
 import EnhancedMoodSelector from "@/components/EnhancedMoodSelector";
 
 const Index = () => {
@@ -18,15 +19,47 @@ const Index = () => {
   const [includeHindi, setIncludeHindi] = useState(true);
   const [loading, setLoading] = useState(false);
   const [isPopulating, setIsPopulating] = useState(false);
+  const [dbStats, setDbStats] = useState({ count: 0, loading: true });
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Auto-ingest curated songs on first mount
+  // Check database stats
+  useEffect(() => {
+    const checkDatabaseStats = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('songs')
+          .select('*', { count: 'exact', head: true });
+        
+        if (!error) {
+          setDbStats({ count: count || 0, loading: false });
+          console.log('Current database song count:', count);
+        }
+      } catch (error) {
+        console.error('Error checking database stats:', error);
+        setDbStats({ count: 0, loading: false });
+      }
+    };
+
+    checkDatabaseStats();
+  }, []);
+
+  // Auto-ingest curated songs on first mount - but only if database is not well populated
   useEffect(() => {
     const populateSongs = async () => {
+      // Only populate if we have fewer than 70 songs (assuming some base songs exist)
+      if (dbStats.loading || dbStats.count >= 70) {
+        console.log('Skipping population - database already has enough songs:', dbStats.count);
+        return;
+      }
+
       setIsPopulating(true);
       try {
         console.log('Starting song population...');
+        
+        // Reset any previous population flags by clearing localStorage
+        localStorage.removeItem('songsPopulated');
+        
         const results = await spotifyDatabaseService.addCuratedSongsToDatabase();
         console.log('Song population results:', results);
         
@@ -35,16 +68,33 @@ const Index = () => {
             title: "🎵 Music Library Updated",
             description: `Added ${results.added} new songs to your collection!`,
           });
+          
+          // Update stats
+          setDbStats(prev => ({ ...prev, count: prev.count + results.added }));
+        } else if (results?.errors > 0) {
+          toast({
+            title: "⚠️ Database Update Issues",
+            description: `Encountered ${results.errors} errors while adding songs. Check console for details.`,
+            variant: "destructive",
+          });
         }
       } catch (error) {
         console.error('Failed to populate songs:', error);
+        toast({
+          title: "❌ Database Update Failed",
+          description: "Failed to update music library. Check console for details.",
+          variant: "destructive",
+        });
       } finally {
         setIsPopulating(false);
       }
     };
 
-    populateSongs();
-  }, [toast]);
+    // Only run population if dbStats are loaded
+    if (!dbStats.loading) {
+      populateSongs();
+    }
+  }, [toast, dbStats.loading, dbStats.count]);
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
@@ -78,12 +128,16 @@ const Index = () => {
             Discover music that perfectly matches your current vibe. Set your mood and let AI curate the perfect playlist for you.
           </p>
           
-          {isPopulating && (
-            <div className="flex items-center justify-center gap-2 text-sm text-purple-600 bg-purple-50 rounded-full px-4 py-2 mx-auto w-fit">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
-              <span>Updating music library...</span>
-            </div>
-          )}
+          {/* Database Stats */}
+          <div className="flex items-center justify-center gap-4 text-sm text-gray-500">
+            <span>🎵 {dbStats.count} songs in library</span>
+            {isPopulating && (
+              <div className="flex items-center gap-2 text-purple-600 bg-purple-50 rounded-full px-3 py-1">
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-600"></div>
+                <span>Updating library...</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Main Card */}

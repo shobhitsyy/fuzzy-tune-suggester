@@ -33,6 +33,14 @@ export const addCuratedSongsToDatabase = async () => {
   const results = { added: 0, errors: 0, skipped: 0 };
   const addedSongIds: string[] = [];
 
+  // First, let's check what categories are allowed in the database
+  const { data: existingCategories } = await supabase
+    .from('songs')
+    .select('category')
+    .limit(5);
+  
+  console.log('Existing categories in database:', existingCategories?.map(s => s.category));
+
   // Compose merged song list with language property
   const allSongs = [
     ...curatedSongs.english.map(song => ({ ...song, language: 'English' })),
@@ -61,8 +69,38 @@ export const addCuratedSongsToDatabase = async () => {
       const spotifyTrack = await spotifyService.searchSpecificTrack(song.name, song.artist);
 
       if (!spotifyTrack) {
-        console.log(`Could not find ${song.name} on Spotify`);
-        results.errors++;
+        console.log(`Could not find ${song.name} on Spotify, adding with default data`);
+        
+        // Add song with default data if Spotify lookup fails
+        const songId = `song_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const duration = '3:00'; // Default duration
+        const releaseDate = '2023-01-01'; // Default release date
+
+        const { error: insertError } = await supabase
+          .from('songs')
+          .insert({
+            id: songId,
+            title: song.name,
+            artist: song.artist,
+            album: 'Unknown Album',
+            release_date: releaseDate,
+            language: song.language,
+            category: song.category,
+            cover_image: '/placeholder.svg',
+            duration,
+            spotify_url: null,
+            tags: [song.category],
+            description: `${song.name} by ${song.artist}`
+          });
+
+        if (!insertError) {
+          console.log(`Successfully added: ${song.name} with default data`);
+          results.added++;
+          addedSongIds.push(songId);
+        } else {
+          console.error(`Error inserting ${song.name} with default data:`, insertError);
+          results.errors++;
+        }
         continue;
       }
 
@@ -77,6 +115,7 @@ export const addCuratedSongsToDatabase = async () => {
       const releaseDate = spotifyTrack.album?.release_date || '2023-01-01';
 
       console.log(`Inserting song: ${spotifyTrack.name} with Spotify data`);
+      console.log(`Category: ${song.category}, Release Date: ${releaseDate}`);
 
       // Insert new song with full metadata
       const { error: insertError } = await supabase
@@ -102,6 +141,7 @@ export const addCuratedSongsToDatabase = async () => {
         addedSongIds.push(songId);
       } else {
         console.error(`Error inserting ${song.name}:`, insertError);
+        console.error('Full error details:', JSON.stringify(insertError, null, 2));
         results.errors++;
       }
     } catch (error) {
