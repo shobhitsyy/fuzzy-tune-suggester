@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Music, Heart, Zap } from "lucide-react";
+import { Sparkles, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { spotifyDatabaseService } from "@/services/spotifyDatabaseService";
-import { supabase } from "@/integrations/supabase/client";
 import EnhancedMoodSelector from "@/components/EnhancedMoodSelector";
+import AnimatedBackground from "@/components/AnimatedBackground";
+import MoodMelodyHeader from "@/components/MoodMelodyHeader";
+import PageFooter from "@/components/PageFooter";
 
 const Index = () => {
   const [moodInputs, setMoodInputs] = useState({
@@ -22,39 +24,14 @@ const Index = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Large floating music notes */}
-        <div className="absolute top-20 left-10 text-6xl opacity-10 animate-pulse text-purple-400">♪</div>
-        <div className="absolute top-40 right-16 text-4xl opacity-15 animate-bounce text-pink-400">♫</div>
-        <div className="absolute bottom-32 left-20 text-5xl opacity-12 animate-pulse text-blue-400">♬</div>
-
-        {/* Gradient orbs */}
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-purple-300/30 to-blue-300/30 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-gradient-to-br from-pink-300/30 to-purple-300/30 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-br from-blue-200/20 to-indigo-200/20 rounded-full blur-2xl"></div>
-      </div>
+      <AnimatedBackground />
       <main className="relative z-10 container mx-auto px-4 py-8 flex flex-col items-center justify-center min-h-screen">
-        {/* Header Section */}
         <div className="text-center mb-12 space-y-2 sm:space-y-4">
-          <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 mb-2 sm:mb-4">
-            <div className="relative">
-              <Music className="h-12 w-12 text-gradient animate-pulse" style={{
-                background: "linear-gradient(90deg,#a855f7 0%,#ec4899 45%,#3b82f6 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent"
-              }} />
-              <Heart className="h-6 w-6 text-pink-500 absolute -top-2 -right-2 animate-bounce" />
-            </div>
-            <h1 className="text-5xl sm:text-6xl font-extrabold bg-gradient-to-r from-purple-700 via-pink-500 to-blue-700 text-transparent bg-clip-text leading-tight tracking-wide drop-shadow-lg hover:scale-105 transform transition">
-              Mood Melody
-            </h1>
-          </div>
+          <MoodMelodyHeader />
           <p className="text-md sm:text-lg md:text-xl text-neutral-600 max-w-xl mx-auto leading-relaxed mt-2">
             Discover music that perfectly matches your current vibe. Set your mood and let AI curate the perfect playlist for you.
           </p>
         </div>
-        {/* Main Card */}
         <Card className="w-full max-w-2xl bg-white/80 backdrop-blur-lg border-0 shadow-2xl rounded-3xl overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-8">
             <CardTitle className="flex items-center gap-3 text-2xl md:text-3xl font-bold">
@@ -85,7 +62,7 @@ const Index = () => {
                       moodParams: { ...moodInputs },
                       includeEnglish,
                       includeHindi,
-                      maxSongs: 20,
+                      maxSongs: 40,
                     }
                   });
                 }, 800);
@@ -108,17 +85,7 @@ const Index = () => {
             </Button>
           </CardContent>
         </Card>
-        {/* Footer */}
-        <div className="mt-12 text-center space-y-2 opacity-70">
-          <p className="text-sm text-gray-500">
-            Powered by Spotify API & Advanced AI Mood Analysis
-          </p>
-          <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
-            <span>✨</span>
-            <span>Personalized Music Discovery</span>
-            <span>✨</span>
-          </div>
-        </div>
+        <PageFooter />
       </main>
     </div>
   );

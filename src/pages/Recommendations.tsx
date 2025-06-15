@@ -1,13 +1,15 @@
 
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import SongCard from '@/components/SongCard';
 import SongDetail from '@/components/SongDetail';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { MoodParams, determineSongCategory, Song } from '@/utils/fuzzyLogic';
 import { getRecommendedSongs } from '@/services/songService';
 import { useToast } from '@/hooks/use-toast';
+import RecommendationGrid from '@/components/RecommendationGrid';
+import RecommendationSkeletonGrid from '@/components/RecommendationSkeletonGrid';
+import RecommendationEmptyState from '@/components/RecommendationEmptyState';
 
 const Recommendations = () => {
   const location = useLocation();
@@ -35,7 +37,7 @@ const Recommendations = () => {
         const songs = await getRecommendedSongs(
           category,
           memberships,
-          40, // Increased: Allow up to 40 recommendations
+          40,
           includeEnglish,
           includeHindi
         );
@@ -105,29 +107,13 @@ const Recommendations = () => {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...Array(12)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <div className="aspect-square bg-gray-200 rounded mb-4"></div>
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <RecommendationSkeletonGrid />
         ) : recommendedSongs.length > 0 ? (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {recommendedSongs.map((song) => (
-                <SongCard
-                  key={song.id}
-                  song={song}
-                  onClick={() => handleSongSelect(song)}
-                />
-              ))}
-            </div>
+            <RecommendationGrid
+              recommendedSongs={recommendedSongs}
+              onSongSelect={handleSongSelect}
+            />
             
             <div className="text-center mt-8">
               <p className="text-gray-600">
@@ -136,20 +122,11 @@ const Recommendations = () => {
             </div>
           </>
         ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">
-              {!includeEnglish && !includeHindi 
-                ? "Please select at least one language to see recommendations."
-                : "No songs found for your current mood. Try adjusting your preferences!"
-              }
-            </p>
-            <Button 
-              onClick={handleBackToHome}
-              className="mt-4"
-            >
-              Adjust Settings
-            </Button>
-          </div>
+          <RecommendationEmptyState
+            includeEnglish={includeEnglish}
+            includeHindi={includeHindi}
+            onBack={handleBackToHome}
+          />
         )}
 
         {selectedSong && (
