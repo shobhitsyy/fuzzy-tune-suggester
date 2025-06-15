@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { Song } from "@/utils/fuzzyLogic";
-import { getSimilarSongs } from "@/services/songService";
+import { getSimilarSongsByArtist } from "@/services/songService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,17 +23,16 @@ const SongDetail: React.FC<SongDetailProps> = ({
   const [similarSongs, setSimilarSongs] = useState<Song[]>([]);
   const [isLoadingSimilar, setIsLoadingSimilar] = useState(false);
 
-  // Fetch similar songs when song changes
+  // Fetch similar songs by same artist when song changes
   useEffect(() => {
-    const fetchSimilarSongs = async () => {
+    const fetchSimilar = async () => {
       if (!song) {
         setSimilarSongs([]);
         return;
       }
-
       setIsLoadingSimilar(true);
       try {
-        const similar = await getSimilarSongs(song.id, 3);
+        const similar = await getSimilarSongsByArtist(song.id, song.artist, 3);
         setSimilarSongs(similar);
       } catch (error) {
         console.error('Error fetching similar songs:', error);
@@ -45,7 +43,7 @@ const SongDetail: React.FC<SongDetailProps> = ({
     };
 
     if (isOpen && song) {
-      fetchSimilarSongs();
+      fetchSimilar();
     }
   }, [song, isOpen]);
 
@@ -74,6 +72,8 @@ const SongDetail: React.FC<SongDetailProps> = ({
       window.open(url, "_blank");
     }
   };
+
+  // Just update the "Similar Songs" section to use similarSongs from artist match (already handled by above useEffect)
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -106,30 +106,24 @@ const SongDetail: React.FC<SongDetailProps> = ({
                 <Music className="h-5 w-5 text-primary" />
                 <DialogTitle className="text-xl">Song Details</DialogTitle>
               </div>
-
               <div className="grid grid-cols-2 gap-y-3">
                 <div className="text-sm text-muted-foreground">Album</div>
                 <div className="text-sm font-medium">{song.album}</div>
-
                 <div className="text-sm text-muted-foreground">Duration</div>
                 <div className="text-sm font-medium flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" />
                   {song.duration}
                 </div>
-
                 <div className="text-sm text-muted-foreground">Release Date</div>
                 <div className="text-sm font-medium flex items-center gap-1">
                   <CalendarIcon className="h-3.5 w-3.5" />
                   {song.releaseDate}
                 </div>
-
                 <div className="text-sm text-muted-foreground">Language</div>
                 <div className="text-sm font-medium capitalize">{song.language}</div>
-
                 <div className="text-sm text-muted-foreground">Category</div>
                 <div className="text-sm font-medium capitalize">{song.category}</div>
               </div>
-
               <div>
                 <h4 className="font-medium mb-2">Tags</h4>
                 <div className="flex flex-wrap gap-1.5">
@@ -140,7 +134,6 @@ const SongDetail: React.FC<SongDetailProps> = ({
                   ))}
                 </div>
               </div>
-
               {song.spotifyUrl && (
                 <Button
                   className="w-full mt-4 bg-[#1DB954] hover:bg-[#1DB954]/90 text-white gap-2"
@@ -151,12 +144,10 @@ const SongDetail: React.FC<SongDetailProps> = ({
                 </Button>
               )}
             </div>
-
             <div className="space-y-4">
               <DialogDescription className="text-foreground">
                 {song.description}
               </DialogDescription>
-
               <div className="mt-6">
                 <h4 className="font-medium mb-3">Similar Songs</h4>
                 {isLoadingSimilar ? (
@@ -197,6 +188,7 @@ const SongDetail: React.FC<SongDetailProps> = ({
                             className="rounded-full"
                             onClick={(e) => {
                               e.stopPropagation();
+                              // openInSpotify expects a url
                               openInSpotify(similar.spotifyUrl!);
                             }}
                           >
@@ -213,7 +205,6 @@ const SongDetail: React.FC<SongDetailProps> = ({
             </div>
           </div>
         </ScrollArea>
-
         <DialogFooter className="bg-muted/30 p-4">
           <Button variant="outline" onClick={onClose}>
             Close

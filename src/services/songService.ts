@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Song, SongCategoryType } from '@/utils/fuzzyLogic';
 
@@ -168,47 +167,30 @@ export const getSongsByCategory = async (
   }
 };
 
-// Get similar songs for a given song ID
-export const getSimilarSongs = async (songId: string, limit: number = 3): Promise<Song[]> => {
+// Remove the old getSimilarSongs function and replace with artist-based variant
+
+// Get songs by the same artist, excluding the current song
+export const getSimilarSongsByArtist = async (
+  songId: string,
+  artist: string,
+  limit: number = 3
+): Promise<Song[]> => {
   try {
-    console.log('Fetching similar songs for:', songId);
-    
-    const { data: similarities, error: similarityError } = await supabase
-      .from('song_similarities')
-      .select('similar_song_id')
-      .eq('song_id', songId)
-      .limit(limit);
-
-    if (similarityError) {
-      console.error('Error fetching song similarities:', similarityError);
-      throw similarityError;
-    }
-
-    if (!similarities || similarities.length === 0) {
-      console.log('No similarities found for song:', songId);
-      return [];
-    }
-
-    const similarSongIds = similarities.map(s => s.similar_song_id).filter(Boolean);
-    
-    if (similarSongIds.length === 0) {
-      return [];
-    }
-    
-    const { data: songs, error: songsError } = await supabase
+    const { data, error } = await supabase
       .from('songs')
       .select('*')
-      .in('id', similarSongIds);
+      .eq('artist', artist)
+      .neq('id', songId)
+      .limit(limit);
 
-    if (songsError) {
-      console.error('Error fetching similar songs:', songsError);
-      throw songsError;
+    if (error) {
+      console.error('Error fetching similar songs by artist:', error);
+      return [];
     }
 
-    console.log('Similar songs fetched:', songs?.length || 0);
-    return songs?.map(transformDatabaseSongToSong) || [];
+    return data?.map(transformDatabaseSongToSong) ?? [];
   } catch (error) {
-    console.error('Error in getSimilarSongs:', error);
+    console.error('Error in getSimilarSongsByArtist:', error);
     return [];
   }
 };
