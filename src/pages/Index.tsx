@@ -118,17 +118,7 @@ const Index = () => {
           <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
             Discover music that perfectly matches your current vibe. Set your mood and let AI curate the perfect playlist for you.
           </p>
-
-          {/* Database Stats */}
-          <div className="flex items-center justify-center gap-4 text-sm text-gray-500">
-            <span>🎵 {dbStats.count} songs in library</span>
-            {isPopulating && (
-              <div className="flex items-center gap-2 text-purple-600 bg-purple-50 rounded-full px-3 py-1">
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-600"></div>
-                <span>Updating library...</span>
-              </div>
-            )}
-          </div>
+          {/* Removed library stats and updating spinner */}
         </div>
 
         {/* Main Card */}
@@ -185,38 +175,16 @@ const Index = () => {
                 </div>
               )}
             </Button>
-
-            {/* Add button to trigger population manually */}
-            <Button
-              onClick={handlePopulateSongs}
-              disabled={isPopulating}
-              className="w-full mt-4 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white font-bold py-3 px-8 text-base rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-            >
-              {isPopulating ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Updating Library...</span>
-                </div>
-              ) : (
-                <span>Update Song Database</span>
-              )}
-            </Button>
+            {/* Removed Update Song Database button */}
           </CardContent>
         </Card>
-
-        {/* Render the seeding component temporarily */}
-        {/* <SeedSongs /> */}
 
         {/* Footer */}
         <div className="mt-12 text-center space-y-2 opacity-70">
           <p className="text-sm text-gray-500">
             Powered by Spotify API & Advanced AI Mood Analysis
           </p>
-          <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
-            <span>✨</span>
-            <span>Personalized Music Discovery</span>
-            <span>✨</span>
-          </div>
+          {/* Removed Personalized Music Discovery text */}
         </div>
       </main>
     </div>

@@ -96,7 +96,7 @@ const Recommendations = () => {
               🎵 Your Music Recommendations
             </h1>
             <p className="text-lg text-gray-600 mb-2">
-              Curated for your <span className="text-purple-600 font-semibold">{category}</span> mood
+              Curated for your <span className="text-purple-600 font-semibold">{category || 'your'} </span> mood
             </p>
             <p className="text-sm text-gray-500">
               Languages: {includeEnglish && includeHindi ? 'English & Hindi' : includeEnglish ? 'English' : 'Hindi'}

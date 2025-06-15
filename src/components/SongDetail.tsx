@@ -149,7 +149,7 @@ const SongDetail: React.FC<SongDetailProps> = ({
                 {song.description}
               </DialogDescription>
               <div className="mt-6">
-                <h4 className="font-medium mb-3">Similar Songs</h4>
+                <h4 className="font-medium mb-3">Similar Songs by the Artist</h4>
                 {isLoadingSimilar ? (
                   <div className="space-y-3">
                     {[...Array(3)].map((_, i) => (
