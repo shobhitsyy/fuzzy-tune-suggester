@@ -30,16 +30,21 @@ export const addCuratedSongsToDatabase = async () => {
   }
   
   console.log('Starting to populate curated songs...');
+  
+  // First, test Spotify API connection
+  try {
+    const canMakeApiCalls = await spotifyService.canMakeApiCalls();
+    if (!canMakeApiCalls) {
+      throw new Error('Cannot connect to Spotify API');
+    }
+    console.log('✅ Spotify API connection verified');
+  } catch (error) {
+    console.error('❌ Spotify API connection failed:', error);
+    throw new Error('Failed to connect to Spotify API. Please check your credentials.');
+  }
+  
   const results = { added: 0, errors: 0, skipped: 0 };
   const addedSongIds: string[] = [];
-
-  // First, let's check what categories are allowed in the database
-  const { data: existingCategories } = await supabase
-    .from('songs')
-    .select('category')
-    .limit(5);
-  
-  console.log('Existing categories in database:', existingCategories?.map(s => s.category));
 
   // Compose merged song list with language property
   const allSongs = [
@@ -47,9 +52,11 @@ export const addCuratedSongsToDatabase = async () => {
     ...curatedSongs.hindi.map(song => ({ ...song, language: 'Hindi' }))
   ];
 
+  console.log(`Processing ${allSongs.length} curated songs...`);
+
   for (const song of allSongs) {
     try {
-      console.log(`Processing song: ${song.name} by ${song.artist}`);
+      console.log(`🎵 Processing song: ${song.name} by ${song.artist}`);
       
       // Check if song already exists in Supabase by name+artist
       const { data: existingSong } = await supabase
@@ -60,19 +67,21 @@ export const addCuratedSongsToDatabase = async () => {
         .maybeSingle();
 
       if (existingSong) {
-        console.log(`Song ${song.name} already exists, skipping...`);
+        console.log(`⏭️ Song ${song.name} already exists, skipping...`);
         results.skipped++;
         continue;
       }
 
       // Find track on Spotify for accurate URLs/metadata
+      console.log(`🔍 Searching Spotify for: ${song.name} by ${song.artist}`);
       const spotifyTrack = await spotifyService.searchSpecificTrack(song.name, song.artist);
 
+      const songId = `song_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
       if (!spotifyTrack) {
-        console.log(`Could not find ${song.name} on Spotify, adding with default data`);
+        console.log(`⚠️ Could not find ${song.name} on Spotify, adding with default data`);
         
         // Add song with default data if Spotify lookup fails
-        const songId = `song_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const duration = '3:00'; // Default duration
         const releaseDate = '2023-01-01'; // Default release date
 
@@ -94,17 +103,18 @@ export const addCuratedSongsToDatabase = async () => {
           });
 
         if (!insertError) {
-          console.log(`Successfully added: ${song.name} with default data`);
+          console.log(`✅ Successfully added: ${song.name} with default data`);
           results.added++;
           addedSongIds.push(songId);
         } else {
-          console.error(`Error inserting ${song.name} with default data:`, insertError);
+          console.error(`❌ Error inserting ${song.name} with default data:`, insertError);
           results.errors++;
         }
         continue;
       }
 
-      const songId = `song_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log(`✅ Found on Spotify: ${spotifyTrack.name} by ${spotifyTrack.artists[0]?.name}`);
+
       const categories = [song.category];
       const durationMs = spotifyTrack.duration_ms || 180000; // Default 3 minutes if not available
       const minutes = Math.floor(durationMs / 60000);
@@ -112,10 +122,10 @@ export const addCuratedSongsToDatabase = async () => {
       const duration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
       // Get album release date from Spotify, fallback to a default
-      const releaseDate = (spotifyTrack.album as any)?.release_date || '2023-01-01';
+      const releaseDate = spotifyTrack.album?.release_date || '2023-01-01';
 
-      console.log(`Inserting song: ${spotifyTrack.name} with Spotify data`);
-      console.log(`Category: ${song.category}, Release Date: ${releaseDate}`);
+      console.log(`💾 Inserting song: ${spotifyTrack.name} with Spotify data`);
+      console.log(`📅 Category: ${song.category}, Release Date: ${releaseDate}`);
 
       // Insert new song with full metadata
       const { error: insertError } = await supabase
@@ -136,23 +146,23 @@ export const addCuratedSongsToDatabase = async () => {
         });
 
       if (!insertError) {
-        console.log(`Successfully added: ${spotifyTrack.name}`);
+        console.log(`✅ Successfully added: ${spotifyTrack.name}`);
         results.added++;
         addedSongIds.push(songId);
       } else {
-        console.error(`Error inserting ${song.name}:`, insertError);
+        console.error(`❌ Error inserting ${song.name}:`, insertError);
         console.error('Full error details:', JSON.stringify(insertError, null, 2));
         results.errors++;
       }
     } catch (error) {
-      console.error(`Error processing ${song.name}:`, error);
+      console.error(`❌ Error processing ${song.name}:`, error);
       results.errors++;
     }
   }
 
   // Create pairwise similarities only for new ingested songs
   if (addedSongIds.length > 1) {
-    console.log(`Creating similarities for ${addedSongIds.length} songs`);
+    console.log(`🔗 Creating similarities for ${addedSongIds.length} songs`);
     const similarities: Array<{ id: string; song_id: string; similar_song_id: string }> = [];
     for (let i = 0; i < addedSongIds.length; i++) {
       for (let j = i + 1; j < addedSongIds.length; j++) {
@@ -172,9 +182,9 @@ export const addCuratedSongsToDatabase = async () => {
     if (similarities.length > 0) {
       const { error: simError } = await supabase.from('song_similarities').insert(similarities);
       if (simError) {
-        console.error('Error creating similarities:', simError);
+        console.error('❌ Error creating similarities:', simError);
       } else {
-        console.log(`Created ${similarities.length} similarity relationships`);
+        console.log(`✅ Created ${similarities.length} similarity relationships`);
       }
     }
   }
@@ -184,7 +194,7 @@ export const addCuratedSongsToDatabase = async () => {
     hasPopulated = true;
   }
 
-  console.log('Curated songs population complete:', results);
+  console.log('🎉 Curated songs population complete:', results);
   return results;
 };
 

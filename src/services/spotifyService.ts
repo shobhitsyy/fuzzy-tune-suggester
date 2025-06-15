@@ -13,7 +13,8 @@ interface SpotifyTrack {
   artists: Array<{ name: string }>;
   album: { 
     name: string; 
-    images: Array<{ url: string }> 
+    images: Array<{ url: string }>;
+    release_date?: string;
   };
   duration_ms: number;
   external_urls: { spotify: string };
@@ -37,6 +38,7 @@ class SpotifyService {
   private config: SpotifyConfig;
   private accessToken: string | null = null;
   private clientCredentialsToken: string | null = null;
+  private tokenExpiryTime: number | null = null;
 
   constructor() {
     this.config = {
@@ -57,15 +59,27 @@ class SpotifyService {
     
     // Try to get existing token from localStorage
     this.accessToken = localStorage.getItem('spotify_access_token');
+    const expiryTime = localStorage.getItem('spotify_token_expiry');
+    this.tokenExpiryTime = expiryTime ? parseInt(expiryTime) : null;
+  }
+
+  // Check if token is expired
+  private isTokenExpired(): boolean {
+    if (!this.tokenExpiryTime) return true;
+    return Date.now() > this.tokenExpiryTime;
   }
 
   // Get client credentials token for API access without user auth
   async getClientCredentialsToken(): Promise<string> {
-    if (this.clientCredentialsToken) {
+    // Check if we have a valid token
+    if (this.clientCredentialsToken && !this.isTokenExpired()) {
+      console.log('Using existing valid Spotify token');
       return this.clientCredentialsToken;
     }
 
     try {
+      console.log('Requesting new Spotify client credentials token...');
+      
       const response = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
         headers: {
@@ -76,12 +90,23 @@ class SpotifyService {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get client credentials token');
+        const errorText = await response.text();
+        console.error('Spotify token request failed:', response.status, errorText);
+        throw new Error(`Failed to get client credentials token: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
       this.clientCredentialsToken = data.access_token;
-      console.log('Got Spotify client credentials token');
+      
+      // Set expiry time (tokens typically last 1 hour)
+      const expiresIn = data.expires_in || 3600; // Default to 1 hour
+      this.tokenExpiryTime = Date.now() + (expiresIn * 1000);
+      
+      // Store in localStorage for persistence
+      localStorage.setItem('spotify_client_token', this.clientCredentialsToken);
+      localStorage.setItem('spotify_token_expiry', this.tokenExpiryTime.toString());
+      
+      console.log('Successfully obtained Spotify client credentials token');
       return this.clientCredentialsToken;
     } catch (error) {
       console.error('Error getting client credentials token:', error);
@@ -113,7 +138,8 @@ class SpotifyService {
     try {
       await this.getClientCredentialsToken();
       return true;
-    } catch {
+    } catch (error) {
+      console.error('Cannot make Spotify API calls:', error);
       return false;
     }
   }
@@ -160,6 +186,7 @@ class SpotifyService {
   // Search for tracks based on mood and preferences
   async searchTracks(params: SpotifySearchParams): Promise<SpotifyTrack[]> {
     try {
+      console.log('Searching Spotify tracks with params:', params);
       const token = await this.getApiToken();
       let query = '';
       
@@ -175,24 +202,30 @@ class SpotifyService {
         query += 'market:US ';
       }
 
-      const response = await fetch(
-        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query.trim() || 'pop')}&type=track&limit=${params.limit || 20}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+      const searchQuery = encodeURIComponent(query.trim() || 'pop');
+      const url = `https://api.spotify.com/v1/search?q=${searchQuery}&type=track&limit=${params.limit || 20}`;
+      
+      console.log('Making Spotify API request to:', url);
+
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      );
+      });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Spotify search failed:', response.status, errorText);
+        
         if (response.status === 401) {
           this.logout();
           throw new Error('Spotify session expired. Please reconnect.');
         }
-        throw new Error('Failed to search Spotify tracks');
+        throw new Error(`Failed to search Spotify tracks: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('Spotify search response:', data.tracks?.items?.length || 0, 'tracks found');
       return data.tracks.items || [];
     } catch (error) {
       console.error('Spotify search error:', error);
@@ -203,24 +236,36 @@ class SpotifyService {
   // Search for specific track by name and artist
   async searchSpecificTrack(trackName: string, artistName: string): Promise<SpotifyTrack | null> {
     try {
+      console.log(`Searching for specific track: "${trackName}" by "${artistName}"`);
       const token = await this.getApiToken();
       const query = `track:"${trackName}" artist:"${artistName}"`;
+      const searchQuery = encodeURIComponent(query);
+      const url = `https://api.spotify.com/v1/search?q=${searchQuery}&type=track&limit=1`;
       
-      const response = await fetch(
-        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+      console.log('Making specific track search to:', url);
+
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      );
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to search for specific track');
+        const errorText = await response.text();
+        console.error('Spotify specific track search failed:', response.status, errorText);
+        throw new Error(`Failed to search for specific track: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
-      return data.tracks.items[0] || null;
+      const track = data.tracks.items[0] || null;
+      
+      if (track) {
+        console.log(`Found track: ${track.name} by ${track.artists[0]?.name}`);
+      } else {
+        console.log(`No track found for: "${trackName}" by "${artistName}"`);
+      }
+      
+      return track;
     } catch (error) {
       console.error('Error searching for specific track:', error);
       return null;
@@ -331,8 +376,11 @@ class SpotifyService {
   logout() {
     this.accessToken = null;
     this.clientCredentialsToken = null;
+    this.tokenExpiryTime = null;
     localStorage.removeItem('spotify_access_token');
     localStorage.removeItem('spotify_client_id');
+    localStorage.removeItem('spotify_client_token');
+    localStorage.removeItem('spotify_token_expiry');
   }
 }
 
