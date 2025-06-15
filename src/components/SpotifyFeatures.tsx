@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { spotifyService } from '@/services/spotifyService';
 import { useToast } from '@/hooks/use-toast';
-import { PlaylistPlus, Search, Music } from 'lucide-react';
+import { ListPlus, Search, Music } from 'lucide-react';
 import { Song } from '@/utils/fuzzyLogic';
 
 interface SpotifyFeaturesProps {
@@ -135,7 +135,7 @@ const SpotifyFeatures: React.FC<SpotifyFeaturesProps> = ({ recommendedSongs, cur
                 {isCreatingPlaylist ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 ) : (
-                  <PlaylistPlus className="h-4 w-4" />
+                  <ListPlus className="h-4 w-4" />
                 )}
               </Button>
             </div>
