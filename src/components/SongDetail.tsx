@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { Song } from "@/utils/fuzzyLogic";
@@ -44,17 +43,18 @@ const SongDetail: React.FC<SongDetailProps> = ({ song, open, onClose }) => {
 
   return (
     <Dialog open={open} onOpenChange={val => !val && onClose()}>
-      <DialogContent className="max-w-md w-[95vw] p-0 bg-background shadow-2xl rounded-t-3xl rounded-b-lg border-0 mobile-modal-dc relative">
+      <DialogContent className="max-w-md w-[98vw] p-0 bg-background shadow-2xl rounded-t-3xl rounded-b-lg border-0 mobile-modal-dc relative">
+        <DialogTitle className="sr-only">{song.title} by {song.artist}</DialogTitle>
+        <DialogDescription className="sr-only">{song.album}, {song.releaseDate}</DialogDescription>
         {/* Single close button */}
-        <Button
-          size="icon"
-          variant="ghost"
+        <button
+          type="button"
           aria-label="Close"
-          className="absolute z-10 top-3 right-3 bg-black/50 text-white rounded-full hover:bg-black/75"
+          className="absolute z-10 top-3 right-3 bg-black/60 text-white rounded-full hover:bg-black/90 p-2"
           onClick={onClose}
         >
           <X className="h-6 w-6" />
-        </Button>
+        </button>
         {/* Top Cover Image Section */}
         <div className="relative w-full h-40 sm:h-48 rounded-t-3xl overflow-hidden flex items-end justify-start bg-gray-100">
           <img
@@ -102,7 +102,6 @@ const SongDetail: React.FC<SongDetailProps> = ({ song, open, onClose }) => {
               <span className="capitalize">{song.category}</span>
             </div>
           </div>
-          {/* Description */}
           {song.description && (
             <p className="mt-4 text-gray-700 text-[15px] leading-[1.6]">{song.description}</p>
           )}
@@ -117,7 +116,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ song, open, onClose }) => {
           )}
           {(artistSongs.length > 0) &&
             <ul className="divide-y divide-gray-100">
-              {artistSongs.slice(0,3).map(track => (
+              {artistSongs.map(track => (
                 <li key={track.id} className="flex items-center gap-3 py-2">
                   <img src={track.coverImage} alt={track.title} className="w-9 h-9 object-cover rounded shadow" />
                   <div>
@@ -131,7 +130,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ song, open, onClose }) => {
         </div>
         <style>{`
         @media (max-width: 640px) {
-          .mobile-modal-dc { padding: 0 !important; max-width: 98vw !important; }
+          .mobile-modal-dc { padding: 0 !important; max-width: 99vw !important; }
         }
         `}</style>
       </DialogContent>

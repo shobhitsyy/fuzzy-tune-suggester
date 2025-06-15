@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import RecommendationGrid from '@/components/RecommendationGrid';
 import RecommendationSkeletonGrid from '@/components/RecommendationSkeletonGrid';
 import RecommendationEmptyState from '@/components/RecommendationEmptyState';
+import SongDetail from '@/components/SongDetail';
 
 const Recommendations = () => {
   const location = useLocation();
@@ -34,7 +36,6 @@ const Recommendations = () => {
 
         const desiredMax = Math.max(shownCount, maxSongs || 1000);
 
-        // Fetch songs per category, unique & sorted by max membership, prioritize main category
         const allSongs = await getRecommendedSongs(
           category,
           memberships,
@@ -43,7 +44,6 @@ const Recommendations = () => {
           includeHindi
         );
 
-        // Group & rank by their actual membership scores, fallback to main category
         const sorted = allSongs
           .map(song => ({
             song,
@@ -51,7 +51,6 @@ const Recommendations = () => {
           }))
           .sort((a, b) => b.membership - a.membership);
 
-        // Deduplicate, highest ranking first
         const seenIds = new Set();
         const deduped: Song[] = [];
         for (const { song } of sorted) {
@@ -142,7 +141,7 @@ const Recommendations = () => {
           <>
             <RecommendationGrid
               recommendedSongs={recommendedSongs.slice(0, shownCount)}
-              onSongSelect={() => {}}
+              onSongSelect={handleSongSelect}
             />
             <div className="text-center mt-8">
               <p className="text-gray-600">
@@ -162,10 +161,12 @@ const Recommendations = () => {
             onBack={handleBackToHome}
           />
         )}
-        {/* Remove SongDetail: expanded UI is now within SongCard */}
+        {/* Single SongDetail displayed here, modal managed at page level */}
+        <SongDetail song={selectedSong} open={!!selectedSong} onClose={() => setSelectedSong(null)} />
       </div>
     </div>
   );
 };
 
 export default Recommendations;
+
