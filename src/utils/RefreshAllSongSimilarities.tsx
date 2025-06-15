@@ -2,9 +2,9 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Completely clears and repopulates the song_similarities table so that every song has 3 similar songs
- * of the SAME CATEGORY (if enough possible). Adds both (A,B) and (B,A) directions.
- * No fallback to other categories, strict match only.
+ * Clears and repopulates the song_similarities table so every song has 3 similar songs.
+ * Prefers same category, but fills up remaining with other categories if needed.
+ * Both (A,B) and (B,A) are added for bidirectional relationships.
  */
 export async function refreshAllSongSimilarities() {
   // 1. Clear the song_similarities table (truncate all records)
@@ -25,17 +25,33 @@ export async function refreshAllSongSimilarities() {
     throw new Error("Failed to fetch songs: " + fetchSongsError?.message);
   }
 
-  // 3. For each song, pick 3 other songs of same category
   let bulkSimilarities: any[] = [];
   for (const song of allSongs) {
+    // Songs of the same category, but not self
     const sameCategory = allSongs.filter(s => s.id !== song.id && s.category === song.category);
     // Shuffle
     for (let i = sameCategory.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [sameCategory[i], sameCategory[j]] = [sameCategory[j], sameCategory[i]];
     }
-    const picks = sameCategory.slice(0, 3);
+    // Pick as many as possible from same category (up to 3)
+    let picks = sameCategory.slice(0, 3);
 
+    // If not enough, pick the rest from other categories, avoiding duplicates and self
+    if (picks.length < 3) {
+      // Make a flat list of "other-category" songs, still avoiding self & already picked
+      const alreadyPickedIds = new Set([song.id, ...picks.map(p => p.id)]);
+      const otherCategory = allSongs
+        .filter(s => !alreadyPickedIds.has(s.id));
+      // Shuffle others
+      for (let i = otherCategory.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [otherCategory[i], otherCategory[j]] = [otherCategory[j], otherCategory[i]];
+      }
+      picks = picks.concat(otherCategory.slice(0, 3 - picks.length));
+    }
+
+    // Insert up to 3 similarities (if possible)
     for (const sim of picks) {
       bulkSimilarities.push(
         { id: `${song.id}-${sim.id}`, song_id: song.id, similar_song_id: sim.id },
