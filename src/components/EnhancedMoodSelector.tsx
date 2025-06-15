@@ -4,45 +4,37 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
-import { MoodParams } from '@/utils/fuzzyLogic';
+import { MoodInputs } from '@/utils/fuzzyLogic';
 import { Heart, Activity, Clock, Zap } from 'lucide-react';
 
 interface EnhancedMoodSelectorProps {
-  moodParams: MoodParams;
-  onMoodChange: (params: MoodParams) => void;
+  moodInputs: MoodInputs;
+  onMoodChange: (inputs: MoodInputs) => void;
   includeEnglish: boolean;
   includeHindi: boolean;
   onLanguageChange: (english: boolean, hindi: boolean) => void;
 }
 
 const EnhancedMoodSelector: React.FC<EnhancedMoodSelectorProps> = ({
-  moodParams,
+  moodInputs,
   onMoodChange,
   includeEnglish,
   includeHindi,
   onLanguageChange,
 }) => {
-  const handleParamChange = (param: keyof MoodParams, value: number) => {
+  const handleParamChange = (param: keyof MoodInputs, value: number) => {
     onMoodChange({
-      ...moodParams,
+      ...moodInputs,
       [param]: value,
     });
   };
 
-  const getTimeOfDayLabel = (value: number) => {
-    if (value < 6) return 'Late Night';
-    if (value < 12) return 'Morning';
-    if (value < 17) return 'Afternoon';
-    if (value < 21) return 'Evening';
-    return 'Night';
-  };
-
-  const getActivityLabel = (value: number) => {
-    if (value <= 2) return 'Resting';
-    if (value <= 4) return 'Relaxing';
-    if (value <= 6) return 'Light Activity';
-    if (value <= 8) return 'Active';
-    return 'High Energy';
+  const getEnergyLabel = (value: number) => {
+    if (value <= 2) return 'Very Low';
+    if (value <= 4) return 'Low';
+    if (value <= 6) return 'Moderate';
+    if (value <= 8) return 'High';
+    return 'Very High';
   };
 
   const getMoodLabel = (value: number) => {
@@ -53,12 +45,12 @@ const EnhancedMoodSelector: React.FC<EnhancedMoodSelectorProps> = ({
     return 'Excited';
   };
 
-  const getHeartRateLabel = (value: number) => {
-    if (value <= 60) return 'Very Calm';
-    if (value <= 80) return 'Relaxed';
-    if (value <= 100) return 'Normal';
-    if (value <= 120) return 'Elevated';
-    return 'High Energy';
+  const getFocusLabel = (value: number) => {
+    if (value <= 2) return 'Distracted';
+    if (value <= 4) return 'Relaxed';
+    if (value <= 6) return 'Normal';
+    if (value <= 8) return 'Focused';
+    return 'Intense Focus';
   };
 
   return (
@@ -100,7 +92,7 @@ const EnhancedMoodSelector: React.FC<EnhancedMoodSelectorProps> = ({
 
       {/* Mood Parameters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        {/* Heart Rate */}
+        {/* Energy Level */}
         <Card className="bg-white shadow-sm border-gray-200">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 mb-2 sm:mb-3">
@@ -111,75 +103,49 @@ const EnhancedMoodSelector: React.FC<EnhancedMoodSelectorProps> = ({
             </div>
             <div className="space-y-2 sm:space-y-3">
               <Slider
-                value={[moodParams.heartRate]}
-                onValueChange={([value]) => handleParamChange('heartRate', value)}
-                max={140}
-                min={50}
-                step={5}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-gray-500">{moodParams.heartRate} BPM</span>
-                <span className="text-blue-600 font-medium">{getHeartRateLabel(moodParams.heartRate)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Time of Day */}
-        <Card className="bg-white shadow-sm border-gray-200">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2 mb-2 sm:mb-3">
-              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
-              <Label className="text-sm sm:text-base font-medium text-gray-700">
-                Time of Day
-              </Label>
-            </div>
-            <div className="space-y-2 sm:space-y-3">
-              <Slider
-                value={[moodParams.timeOfDay]}
-                onValueChange={([value]) => handleParamChange('timeOfDay', value)}
-                max={23}
-                min={0}
-                step={1}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-gray-500">{moodParams.timeOfDay}:00</span>
-                <span className="text-blue-600 font-medium">{getTimeOfDayLabel(moodParams.timeOfDay)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Activity Level */}
-        <Card className="bg-white shadow-sm border-gray-200">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2 mb-2 sm:mb-3">
-              <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
-              <Label className="text-sm sm:text-base font-medium text-gray-700">
-                Activity Level
-              </Label>
-            </div>
-            <div className="space-y-2 sm:space-y-3">
-              <Slider
-                value={[moodParams.activity]}
-                onValueChange={([value]) => handleParamChange('activity', value)}
+                value={[moodInputs.energy]}
+                onValueChange={([value]) => handleParamChange('energy', value)}
                 max={10}
                 min={1}
                 step={1}
                 className="w-full"
               />
               <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-gray-500">{moodParams.activity}/10</span>
-                <span className="text-blue-600 font-medium">{getActivityLabel(moodParams.activity)}</span>
+                <span className="text-gray-500">{moodInputs.energy}/10</span>
+                <span className="text-blue-600 font-medium">{getEnergyLabel(moodInputs.energy)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Focus Level */}
+        <Card className="bg-white shadow-sm border-gray-200">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
+              <Label className="text-sm sm:text-base font-medium text-gray-700">
+                Focus Level
+              </Label>
+            </div>
+            <div className="space-y-2 sm:space-y-3">
+              <Slider
+                value={[moodInputs.focus]}
+                onValueChange={([value]) => handleParamChange('focus', value)}
+                max={10}
+                min={1}
+                step={1}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs sm:text-sm">
+                <span className="text-gray-500">{moodInputs.focus}/10</span>
+                <span className="text-blue-600 font-medium">{getFocusLabel(moodInputs.focus)}</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Mood */}
-        <Card className="bg-white shadow-sm border-gray-200">
+        <Card className="bg-white shadow-sm border-gray-200 sm:col-span-2">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 mb-2 sm:mb-3">
               <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
@@ -189,7 +155,7 @@ const EnhancedMoodSelector: React.FC<EnhancedMoodSelectorProps> = ({
             </div>
             <div className="space-y-2 sm:space-y-3">
               <Slider
-                value={[moodParams.mood]}
+                value={[moodInputs.mood]}
                 onValueChange={([value]) => handleParamChange('mood', value)}
                 max={10}
                 min={1}
@@ -197,8 +163,8 @@ const EnhancedMoodSelector: React.FC<EnhancedMoodSelectorProps> = ({
                 className="w-full"
               />
               <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-gray-500">{moodParams.mood}/10</span>
-                <span className="text-blue-600 font-medium">{getMoodLabel(moodParams.mood)}</span>
+                <span className="text-gray-500">{moodInputs.mood}/10</span>
+                <span className="text-blue-600 font-medium">{getMoodLabel(moodInputs.mood)}</span>
               </div>
             </div>
           </CardContent>

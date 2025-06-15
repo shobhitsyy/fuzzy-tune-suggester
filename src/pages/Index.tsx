@@ -171,7 +171,11 @@ const Index = () => {
               </CardHeader>
               <CardContent>
                 <EnhancedMoodSelector 
+                  moodInputs={moodInputs}
                   onMoodChange={setMoodInputs}
+                  includeEnglish={preferences.includeEnglish}
+                  includeHindi={preferences.includeHindi}
+                  onLanguageChange={(english, hindi) => setPreferences({ includeEnglish: english, includeHindi: hindi })}
                 />
               </CardContent>
             </Card>
