@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button';
 import EnhancedMoodSelector from '@/components/EnhancedMoodSelector';
 import SongCard from '@/components/SongCard';
 import SongDetail from '@/components/SongDetail';
+import SpotifyIntegration from '@/components/SpotifyIntegration';
+import SpotifyFeatures from '@/components/SpotifyFeatures';
 import { Song, MoodParams, determineSongCategory } from '@/utils/fuzzyLogic';
 import { populateDatabase, isDatabasePopulated, getRecommendedSongs } from '@/services/songService';
+import { spotifyService } from '@/services/spotifyService';
 import { Music, Sparkles, Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -210,6 +213,13 @@ const Index = () => {
     return `${recommendedSongs.length} songs`;
   };
 
+  const handleSpotifyAuthSuccess = () => {
+    toast({
+      title: "Spotify Connected!",
+      description: "You can now enjoy enhanced music features with your Spotify account.",
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-6xl">
@@ -221,6 +231,11 @@ const Index = () => {
           <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-2xl mx-auto px-2">
             Discover personalized music recommendations based on your current mood and activity.
           </p>
+        </div>
+
+        {/* Spotify Integration */}
+        <div className="mb-6">
+          <SpotifyIntegration onAuthSuccess={handleSpotifyAuthSuccess} />
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -288,6 +303,14 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="recommendations" className="space-y-4 sm:space-y-6">
+            {/* Spotify Features - only show if authenticated and has recommendations */}
+            {spotifyService.isAuthenticated() && recommendedSongs.length > 0 && (
+              <SpotifyFeatures 
+                recommendedSongs={recommendedSongs} 
+                currentMood={currentMood}
+              />
+            )}
+
             <Card className="bg-white shadow-lg rounded-2xl border-0">
               <CardHeader className="pb-3 sm:pb-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
