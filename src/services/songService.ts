@@ -228,7 +228,7 @@ export const getSimilarSongs = async (songId: string, limit: number = 3): Promis
 
 // Get random songs by category
 export const getRandomSongsByCategory = async (
-  category: SongCategory, 
+  category: SongCategoryType, 
   count: number = 3, 
   language?: 'English' | 'Hindi'
 ): Promise<Song[]> => {

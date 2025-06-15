@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +6,7 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Heart, Activity, Music, Info } from 'lucide-react';
-import { calculateMembership, SongCategory, Song } from '@/utils/fuzzyLogic';
+import { calculateMembership, SongCategoryType, Song } from '@/utils/fuzzyLogic';
 import SongCard from '@/components/SongCard';
 import SongDetail from '@/components/SongDetail';
 import { useToast } from '@/hooks/use-toast';
@@ -83,13 +82,13 @@ const Index = () => {
       const memberships = calculateMembership(heartRate, activity, mood);
       
       // Find the primary category (highest membership value)
-      let primaryCategory: SongCategory = 'moderate';
+      let primaryCategory: SongCategoryType = 'moderate';
       let maxMembership = 0;
       
       Object.entries(memberships).forEach(([category, value]) => {
         if (typeof value === 'number' && value > maxMembership) {
           maxMembership = value;
-          primaryCategory = category as SongCategory;
+          primaryCategory = category as SongCategoryType;
         }
       });
 

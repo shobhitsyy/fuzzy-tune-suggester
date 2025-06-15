@@ -40,7 +40,7 @@ const getAudioFeatureCategories = (features: any): SongCategoryType[] => {
 const searchSpotifyForSong = async (title: string, artist: string) => {
   try {
     const query = `track:"${title}" artist:"${artist}"`;
-    const results = await spotifyService.searchTracks(query);
+    const results = await spotifyService.searchTracks({ mood: query, limit: 1 });
     
     if (results && results.length > 0) {
       const track = results[0];
@@ -48,7 +48,7 @@ const searchSpotifyForSong = async (title: string, artist: string) => {
         spotifyId: track.id,
         spotifyUrl: track.external_urls?.spotify,
         coverImage: track.album?.images?.[0]?.url || '/placeholder.svg',
-        audioFeatures: await spotifyService.getAudioFeatures(track.id)
+        audioFeatures: await spotifyService.getAudioFeatures([track.id])
       };
     }
   } catch (error) {
@@ -77,8 +77,8 @@ export const enrichExistingSongs = async (batchSize: number = 50) => {
         
         if (spotifyData) {
           // Determine categories based on audio features
-          const categories = spotifyData.audioFeatures 
-            ? getAudioFeatureCategories(spotifyData.audioFeatures)
+          const categories = spotifyData.audioFeatures && spotifyData.audioFeatures[0]
+            ? getAudioFeatureCategories(spotifyData.audioFeatures[0])
             : [song.category];
 
           // Update the song with Spotify data
@@ -129,7 +129,7 @@ const discoverSongsForCategory = async (category: SongCategoryType, limit: numbe
     const randomTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
     
     // Search for tracks
-    const searchResults = await spotifyService.searchTracks(randomTerm);
+    const searchResults = await spotifyService.searchTracks({ mood: randomTerm, limit });
     
     const tracksToProcess = searchResults ? searchResults.slice(0, limit) : [];
     
@@ -145,8 +145,8 @@ const discoverSongsForCategory = async (category: SongCategoryType, limit: numbe
 
         if (!existingSong) {
           // Get audio features to better categorize
-          const audioFeatures = await spotifyService.getAudioFeatures(track.id);
-          const categories = audioFeatures ? getAudioFeatureCategories(audioFeatures) : [category];
+          const audioFeatures = await spotifyService.getAudioFeatures([track.id]);
+          const categories = audioFeatures && audioFeatures[0] ? getAudioFeatureCategories(audioFeatures[0]) : [category];
           
           // Generate unique ID
           const songId = `spotify-${track.id}`;
