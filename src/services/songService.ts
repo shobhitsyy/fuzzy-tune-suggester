@@ -18,10 +18,16 @@ export interface DatabaseSong {
   updated_at: string;
 }
 
+const VALID_LANGUAGES = ['English', 'Hindi'] as const;
+const VALID_CATEGORIES = [
+  'upbeat', 'party', 'uplifting', 'motivational', 'calm', 'relaxing', 'romantic',
+  'nostalgic', 'happy', 'melancholic', 'study', 'sad'
+] as const;
+
 export const getRecommendedSongs = async (
   primaryCategory: SongCategoryType,
   memberships: Record<SongCategoryType, number>,
-  count: number = 1000, // default to 1000 or whatever large number from UI
+  count: number = 1000,
   includeEnglish: boolean = true,
   includeHindi: boolean = true
 ) => {
@@ -75,15 +81,19 @@ export const getRecommendedSongs = async (
 };
 
 // Transform database song to application song format
-const transformDatabaseSongToSong = (dbSong: DatabaseSong): Song => {
+const transformDatabaseSongToSong = (dbSong: any): Song => {
+  // Force types to union type or use fallback
+  let language: 'English' | 'Hindi' = VALID_LANGUAGES.includes(dbSong.language) ? dbSong.language : 'English';
+  let category: SongCategoryType = VALID_CATEGORIES.includes(dbSong.category) ? dbSong.category : 'upbeat';
+
   return {
     id: dbSong.id,
     title: dbSong.title,
     artist: dbSong.artist,
     album: dbSong.album,
     releaseDate: dbSong.release_date,
-    language: dbSong.language,
-    category: dbSong.category,
+    language,
+    category,
     coverImage: dbSong.cover_image || '/placeholder.svg',
     duration: dbSong.duration,
     spotifyUrl: dbSong.spotify_url || undefined,
@@ -93,7 +103,6 @@ const transformDatabaseSongToSong = (dbSong: DatabaseSong): Song => {
   };
 };
 
-// Get songs by category and language
 export const getSongsByCategory = async (
   category: SongCategoryType, 
   language?: 'English' | 'Hindi'
@@ -125,7 +134,6 @@ export const getSongsByCategory = async (
   }
 };
 
-// Get similar songs for a given song ID
 export const getSimilarSongs = async (songId: string, limit: number = 3): Promise<Song[]> => {
   try {
     console.log('Fetching similar songs for:', songId);
@@ -146,7 +154,7 @@ export const getSimilarSongs = async (songId: string, limit: number = 3): Promis
       return [];
     }
 
-    const similarSongIds = similarities.map(s => s.similar_song_id).filter(Boolean);
+    const similarSongIds = similarities.map((s: any) => s.similar_song_id).filter(Boolean);
     
     if (similarSongIds.length === 0) {
       return [];
@@ -170,7 +178,6 @@ export const getSimilarSongs = async (songId: string, limit: number = 3): Promis
   }
 };
 
-// Check if database has songs
 export const isDatabasePopulated = async (): Promise<boolean> => {
   try {
     console.log('Checking if database has songs...');
@@ -193,7 +200,6 @@ export const isDatabasePopulated = async (): Promise<boolean> => {
   }
 };
 
-// Get random songs by category
 export const getRandomSongsByCategory = async (
   category: SongCategoryType, 
   count: number = 3, 
@@ -211,14 +217,13 @@ export const getRandomSongsByCategory = async (
       query = query.eq('language', language);
     }
 
-    const { data, error } = await query.limit(count * 2); // Get more to shuffle
+    const { data, error } = await query.limit(count * 2);
 
     if (error) {
       console.error('Error fetching random songs:', error);
       throw error;
     }
 
-    // Shuffle the results
     const shuffled = data?.sort(() => 0.5 - Math.random()) || [];
     const result = shuffled.slice(0, count).map(transformDatabaseSongToSong);
     console.log('Random songs fetched:', result.length);
