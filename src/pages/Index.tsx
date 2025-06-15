@@ -1,11 +1,5 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
-import Recommendations from "./Recommendations";
 
-const queryClient = new QueryClient();
+import { Link } from "react-router-dom";
 
 const Index = () => {
   const isAdmin = typeof window !== "undefined" && localStorage.getItem("isAdmin") === "true";
@@ -23,19 +17,19 @@ const Index = () => {
           )}
         </div>
       </nav>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/recommendations" element={<Recommendations />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
+      <div className="flex flex-col items-center mt-10">
+        <h1 className="text-3xl font-bold mb-4">Welcome to Your Music App</h1>
+        <p className="mb-6 text-gray-700">Discover song recommendations or manage songs as admin.</p>
+        <Link
+          to="/recommendations"
+          className="px-6 py-3 rounded bg-blue-600 text-white hover:bg-blue-700 font-semibold text-lg"
+        >
+          See Song Recommendations
+        </Link>
+      </div>
     </>
   );
 };
 
 export default Index;
+
