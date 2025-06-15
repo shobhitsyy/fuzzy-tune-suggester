@@ -159,7 +159,6 @@ export const determineSongCategory = (params: MoodParams): {
   // Apply time of day factor as a modifier
   const timeFactor = timeOfDayFactor(params.timeOfDay);
 
-  // Calculate memberships for each category
   const memberships: Record<SongCategoryType, number> = {
     calm: Math.max(0, calmMembership(params) * (params.timeOfDay >= 20 || params.timeOfDay <= 7 ? 1.15 : 1)),
     relaxed: Math.max(0, relaxedMembership(params)),
@@ -168,25 +167,20 @@ export const determineSongCategory = (params: MoodParams): {
     energetic: Math.max(0, energeticMembership(params) * (params.heartRate > 85 || params.activity > 7 ? 1.22 : 1))
   };
 
-  // Find the highest (not just the first) and avoid "moderate" if there's another close contender
-  let maxCategory: SongCategoryType = "moderate";
-  let maxValue = -1;
-  for (const [category, value] of Object.entries(memberships)) {
-    if (value > maxValue) {
-      maxValue = value;
-      maxCategory = category as SongCategoryType;
-    }
-  }
-  // If mood <= 2: force calm/relaxed
+  // Sort by value
+  const sorted = Object.entries(memberships)
+    .sort((a, b) => b[1] - a[1]);
+  let maxCategory: SongCategoryType = sorted[0][0] as SongCategoryType;
+  let maxValue = sorted[0][1];
+
   if (params.mood <= 2) {
-    if (memberships["calm"] >= memberships["relaxed"]) maxCategory = "calm";
-    else maxCategory = "relaxed";
+    maxCategory = memberships["calm"] >= memberships["relaxed"] ? "calm" : "relaxed";
+  } else if (params.activity >= 8 || params.heartRate >= 95) {
+    maxCategory = memberships["energetic"] > memberships["upbeat"] ? "energetic" : "upbeat";
   }
-  // If activity or heart rate high, boost energetic/upbeat
-  if (params.activity >= 8 || params.heartRate >= 95) {
-    if (memberships["energetic"] > memberships["upbeat"]) maxCategory = "energetic";
-    else maxCategory = "upbeat";
-  }
+  // If primary category membership < .2, fallback to next
+  if (memberships[maxCategory] < 0.2 && sorted[1][1] > 0.15)
+    maxCategory = sorted[1][0] as SongCategoryType;
 
   return {
     category: maxCategory,

@@ -30,11 +30,11 @@ const Recommendations = () => {
     const fetchRecommendations = async () => {
       try {
         setIsLoading(true);
+        // Use all fuzzy params
         const { category, memberships } = determineSongCategory(moodParams);
 
         const desiredMax = Math.max(shownCount, maxSongs || 1000);
 
-        // Fetch songs per category, unique & sorted by max membership, prioritize main category
         const allSongs = await getRecommendedSongs(
           category,
           memberships,
@@ -43,15 +43,13 @@ const Recommendations = () => {
           includeHindi
         );
 
-        // Group & rank by their actual membership scores, fallback to main category
-        const sorted = allSongs
-          .map(song => ({
-            song,
-            membership: memberships[song.category] ?? 0
-          }))
-          .sort((a, b) => b.membership - a.membership);
+        // Category is based on params, not always 'moderate'
+        const sorted = allSongs.map(song => ({
+          song,
+          membership: memberships[song.category] ?? 0
+        }))
+        .sort((a, b) => b.membership - a.membership);
 
-        // Deduplicate, highest ranking first
         const seenIds = new Set();
         const deduped: Song[] = [];
         for (const { song } of sorted) {
