@@ -18,6 +18,7 @@ const Recommendations = () => {
   const { moodParams, includeEnglish, includeHindi, maxSongs } = location.state || {};
   
   const [recommendedSongs, setRecommendedSongs] = useState<Song[]>([]);
+  const [shownCount, setShownCount] = useState(50);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -31,16 +32,38 @@ const Recommendations = () => {
       try {
         setIsLoading(true);
         const { category, memberships } = determineSongCategory(moodParams);
-        // Unlimited number of songs; remove or set high count
-        const songs = await getRecommendedSongs(
+
+        const desiredMax = Math.max(shownCount, maxSongs || 1000);
+
+        // Fetch songs per category, unique & sorted by max membership, prioritize main category
+        const allSongs = await getRecommendedSongs(
           category,
           memberships,
-          maxSongs || 1000, // default high number if not set
+          desiredMax,
           includeEnglish,
           includeHindi
         );
-        setRecommendedSongs(songs);
-        if (songs.length === 0) {
+
+        // Group & rank by their actual membership scores, fallback to main category
+        const sorted = allSongs
+          .map(song => ({
+            song,
+            membership: memberships[song.category] ?? 0
+          }))
+          .sort((a, b) => b.membership - a.membership);
+
+        // Deduplicate, highest ranking first
+        const seenIds = new Set();
+        const deduped: Song[] = [];
+        for (const { song } of sorted) {
+          if (!seenIds.has(song.id)) {
+            seenIds.add(song.id);
+            deduped.push(song);
+          }
+        }
+
+        setRecommendedSongs(deduped.slice(0, desiredMax));
+        if (deduped.length === 0) {
           toast({
             title: "No Songs Found",
             description: "No songs match your current preferences. Try adjusting your settings.",
@@ -59,14 +82,22 @@ const Recommendations = () => {
     };
 
     fetchRecommendations();
-  }, [moodParams, includeEnglish, includeHindi, navigate, toast, maxSongs]);
+    // eslint-disable-next-line
+  }, [moodParams, includeEnglish, includeHindi, navigate, shownCount, toast, maxSongs]);
 
   const handleSongSelect = (song: Song) => setSelectedSong(song);
   const handleBackToHome = () => navigate('/');
 
+  const handleShowMore = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setShownCount(Number(event.target.value));
+  };
+
   const { category } = moodParams ? determineSongCategory(moodParams) : { category: '' };
 
   if (!moodParams) return null;
+
+  // Dropdown options: 50, 100, 200, 500, 1000
+  const dropdownOptions = [50, 100, 200, 500, 1000];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
@@ -91,19 +122,38 @@ const Recommendations = () => {
               Languages: {includeEnglish && includeHindi ? 'English & Hindi' : includeEnglish ? 'English' : 'Hindi'}
             </p>
           </div>
+          <div className="flex justify-center mt-4">
+            <label className="flex items-center gap-2 text-sm text-gray-500">
+              Show:&nbsp;
+              <select 
+                className="border-gray-300 rounded px-2 py-1"
+                value={shownCount}
+                onChange={handleShowMore}
+              >
+                {dropdownOptions.map(opt => (
+                  <option key={opt} value={opt}>{opt} songs</option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
         {isLoading ? (
           <RecommendationSkeletonGrid />
         ) : recommendedSongs.length > 0 ? (
           <>
             <RecommendationGrid
-              recommendedSongs={recommendedSongs}
+              recommendedSongs={recommendedSongs.slice(0, shownCount)}
               onSongSelect={handleSongSelect}
             />
             <div className="text-center mt-8">
               <p className="text-gray-600">
                 Found {recommendedSongs.length} songs matching your mood
               </p>
+              {recommendedSongs.length > shownCount && (
+                <p className="text-xs text-gray-400">
+                  Showing top {shownCount} — use selector above for more
+                </p>
+              )}
             </div>
           </>
         ) : (

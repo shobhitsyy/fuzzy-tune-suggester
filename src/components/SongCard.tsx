@@ -7,6 +7,7 @@ import { Star, Share, ListPlus } from "lucide-react";
 import { addSongToDefaultPlaylist } from "@/services/playlistService";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import LyricSnippet from "@/components/LyricSnippet";
 
 interface SongCardProps {
   song: Song;
@@ -124,6 +125,7 @@ const SongCard: React.FC<SongCardProps> = ({ song, onClick }) => {
         <div className="space-y-0.5 sm:space-y-1">
           <h3 className="font-medium truncate text-xs sm:text-sm leading-tight text-gray-800">{song.title}</h3>
           <p className="text-xs text-gray-500 truncate">{song.artist}</p>
+          <LyricSnippet title={song.title} artist={song.artist} />
           <div className="flex justify-between items-center">
             <span className="text-xs text-gray-400 capitalize">{song.language}</span>
             {song.spotifyUrl && (
