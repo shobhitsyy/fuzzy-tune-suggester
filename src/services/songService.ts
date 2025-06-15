@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Song, SongCategoryType } from '@/utils/fuzzyLogic';
 
@@ -19,72 +18,37 @@ export interface DatabaseSong {
   updated_at: string;
 }
 
-// Get recommended songs based on multiple categories and membership values
 export const getRecommendedSongs = async (
   primaryCategory: SongCategoryType,
   memberships: Record<SongCategoryType, number>,
-  count: number = 20,
+  count: number = 1000, // default to 1000 or whatever large number from UI
   includeEnglish: boolean = true,
   includeHindi: boolean = true
-): Promise<Song[]> => {
+) => {
   try {
-    console.log('Getting recommended songs:', {
-      primaryCategory,
-      memberships,
-      count,
-      includeEnglish,
-      includeHindi
-    });
-
     let languages: ('English' | 'Hindi')[] = [];
     if (includeEnglish) languages.push('English');
     if (includeHindi) languages.push('Hindi');
+    if (!languages.length) return [];
 
-    if (languages.length === 0) {
-      console.log('No languages selected');
-      return [];
-    }
-
-    // Build query with language filter
     let query = supabase
       .from('songs')
       .select('*');
-
     if (languages.length === 1) {
       query = query.eq('language', languages[0]);
     } else if (languages.length === 2) {
       query = query.in('language', languages);
     }
-
     const { data: allSongs, error } = await query;
+    if (error || !allSongs?.length) return [];
 
-    if (error) {
-      console.error('Error fetching songs:', error);
-      throw error;
-    }
-
-    if (!allSongs || allSongs.length === 0) {
-      console.log('No songs found in database');
-      return [];
-    }
-
-    console.log('Total songs available:', allSongs.length);
-
-    // Sort categories by membership values (highest preference first)
     const sortedCategories = Object.entries(memberships)
       .sort((a, b) => b[1] - a[1])
-      .map(([cat]) => cat as SongCategoryType);
-
-    console.log('Categories sorted by preference:', sortedCategories);
+      .map(([cat]) => cat[0] as SongCategoryType);
 
     let resultSongs: typeof allSongs = [];
-
-    // First, add songs from primary category
     const primarySongs = allSongs.filter(song => song.category === primaryCategory);
     resultSongs.push(...primarySongs);
-    console.log(`Added ${primarySongs.length} songs from primary category: ${primaryCategory}`);
-
-    // Then add from other categories in order of preference
     for (const category of sortedCategories) {
       if (category !== primaryCategory && resultSongs.length < count) {
         const categorySongs = allSongs.filter(song => 
@@ -92,27 +56,20 @@ export const getRecommendedSongs = async (
           !resultSongs.some(existing => existing.id === song.id)
         );
         resultSongs.push(...categorySongs);
-        console.log(`Added ${categorySongs.length} songs from category: ${category}`);
       }
     }
-
-    // If we still don't have enough songs, add remaining songs
     if (resultSongs.length < count) {
       const remainingSongs = allSongs.filter(song => 
         !resultSongs.some(existing => existing.id === song.id)
       );
       resultSongs.push(...remainingSongs);
-      console.log(`Added ${remainingSongs.length} remaining songs`);
     }
-
-    // Shuffle and limit results
+    // Shuffle and limit only if needed
     const shuffled = resultSongs.sort(() => 0.5 - Math.random());
-    const result = shuffled.slice(0, count).map(transformDatabaseSongToSong);
-    
-    console.log('Final recommended songs:', result.length);
+    // Remove slice/count limitation - return all
+    const result = shuffled.map(transformDatabaseSongToSong);
     return result;
   } catch (error) {
-    console.error('Error in getRecommendedSongs:', error);
     return [];
   }
 };

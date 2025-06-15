@@ -1,17 +1,21 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Song } from "@/utils/fuzzyLogic";
-import { Play, Info, ExternalLink } from "lucide-react";
+import { Star, Share, ListPlus } from "lucide-react";
 
 interface SongCardProps {
   song: Song;
-  onClick: (song: Song) => void;
+  onClick?: (song: Song) => void;
 }
 
 const SongCard: React.FC<SongCardProps> = ({ song, onClick }) => {
+  const [rating, setRating] = useState(0);
+  const [shared, setShared] = useState(false);
+  const [addedToPlaylist, setAddedToPlaylist] = useState(false);
+
   const openSpotify = (event: React.MouseEvent) => {
     event.stopPropagation();
     if (song.spotifyUrl) {
@@ -19,10 +23,45 @@ const SongCard: React.FC<SongCardProps> = ({ song, onClick }) => {
     }
   };
 
+  // For demo: Add to playlist simply marks state
+  const handleAddToPlaylist = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setAddedToPlaylist(true);
+    setTimeout(() => setAddedToPlaylist(false), 1400);
+  };
+
+  // For demo: Share via navigator.share or clipboard
+  const handleShare = async (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setShared(false);
+    const text = `Check out "${song.title}" by ${song.artist}${song.spotifyUrl ? `: ${song.spotifyUrl}` : ''}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: song.title,
+          text: text,
+          url: song.spotifyUrl
+        });
+      } else {
+        await navigator.clipboard.writeText(text);
+      }
+      setShared(true);
+      setTimeout(() => setShared(false), 1200);
+    } catch {
+      setShared(false);
+    }
+  };
+
+  // Rate the song (star rating)
+  const handleRating = (star: number, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setRating(star);
+  };
+
   return (
     <Card 
       className="bg-white rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer border-0 overflow-hidden group hover:scale-105"
-      onClick={() => onClick(song)}
+      onClick={() => onClick?.(song)}
     >
       <div className="aspect-square overflow-hidden bg-gray-100 relative">
         <img 
@@ -35,19 +74,8 @@ const SongCard: React.FC<SongCardProps> = ({ song, onClick }) => {
             <Badge variant="secondary" className="bg-white/20 backdrop-blur text-white border-0 text-xs px-1.5 py-0.5 sm:px-2 sm:py-1">
               {song.category}
             </Badge>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="bg-white/20 backdrop-blur hover:bg-white/40 text-white rounded-full h-6 w-6 sm:h-8 sm:w-8"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClick(song);
-              }}
-            >
-              <Info className="h-3 w-3 sm:h-4 sm:w-4" />
-            </Button>
+            {/* No info/expand action */}
           </div>
-          
           <div className="space-y-1 sm:space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-xs text-white/80">{song.duration}</span>
@@ -58,14 +86,16 @@ const SongCard: React.FC<SongCardProps> = ({ song, onClick }) => {
                   className="bg-green-600 hover:bg-green-700 text-white rounded-full h-6 w-6 sm:h-8 sm:w-8"
                   onClick={openSpotify}
                 >
-                  <Play className="h-3 w-3 sm:h-4 sm:w-4" fill="white" />
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="12" fill="white" fillOpacity={0.2} />
+                    <polygon points="9,7 18,12 9,17" fill="white" />
+                  </svg>
                 </Button>
               )}
             </div>
           </div>
         </div>
       </div>
-      
       <CardContent className="p-2 sm:p-3 space-y-1.5 sm:space-y-2">
         <div className="space-y-0.5 sm:space-y-1">
           <h3 className="font-medium truncate text-xs sm:text-sm leading-tight text-gray-800">{song.title}</h3>
@@ -79,12 +109,45 @@ const SongCard: React.FC<SongCardProps> = ({ song, onClick }) => {
                 className="h-5 px-2 sm:h-6 sm:px-2 text-xs text-green-600 border-green-200 hover:bg-green-50"
                 onClick={openSpotify}
               >
-                <ExternalLink className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
-                <span className="hidden sm:inline">Spotify</span>
                 <span className="sm:hidden">Play</span>
+                <span className="hidden sm:inline">Spotify</span>
               </Button>
             )}
           </div>
+        </div>
+
+        {/* Song Actions */}
+        <div className="flex gap-2 mt-2 items-center justify-center">
+          {/* Star Rating */}
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Star
+                key={star}
+                className={`h-4 w-4 cursor-pointer transition-colors ${star <= rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                onClick={(e) => handleRating(star, e)}
+                strokeWidth={star <= rating ? 0 : 2}
+                fill={star <= rating ? '#facc15' : 'none'}
+              />
+            ))}
+          </div>
+          {/* Share */}
+          <Button
+            size="icon"
+            variant="ghost"
+            className={`rounded-full transition-colors ${shared ? 'bg-purple-100 text-purple-600' : 'hover:bg-purple-50'}`}
+            onClick={handleShare}
+          >
+            <Share className="h-5 w-5" />
+          </Button>
+          {/* Add to Playlist */}
+          <Button
+            size="icon"
+            variant="ghost"
+            className={`rounded-full transition-colors ${addedToPlaylist ? 'bg-green-100 text-green-600' : 'hover:bg-green-50'}`}
+            onClick={handleAddToPlaylist}
+          >
+            <ListPlus className="h-5 w-5" />
+          </Button>
         </div>
 
         {/* Tags */}

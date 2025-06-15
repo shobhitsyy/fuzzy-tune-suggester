@@ -5,7 +5,7 @@ import { Song } from "@/utils/fuzzyLogic";
 
 interface RecommendationGridProps {
   recommendedSongs: Song[];
-  onSongSelect: (song: Song) => void;
+  onSongSelect?: (song: Song) => void;
 }
 
 const RecommendationGrid: React.FC<RecommendationGridProps> = ({
@@ -17,7 +17,7 @@ const RecommendationGrid: React.FC<RecommendationGridProps> = ({
       <SongCard
         key={song.id}
         song={song}
-        onClick={() => onSongSelect(song)}
+        onClick={onSongSelect ? () => onSongSelect(song) : undefined}
       />
     ))}
   </div>

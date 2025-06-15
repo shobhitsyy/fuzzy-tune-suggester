@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SongDetail from '@/components/SongDetail';
@@ -16,7 +15,7 @@ const Recommendations = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const { moodParams, includeEnglish, includeHindi } = location.state || {};
+  const { moodParams, includeEnglish, includeHindi, maxSongs } = location.state || {};
   
   const [recommendedSongs, setRecommendedSongs] = useState<Song[]>([]);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
@@ -32,19 +31,15 @@ const Recommendations = () => {
       try {
         setIsLoading(true);
         const { category, memberships } = determineSongCategory(moodParams);
-        console.log('Fetching recommendations for category:', category);
-        
+        // Unlimited number of songs; remove or set high count
         const songs = await getRecommendedSongs(
           category,
           memberships,
-          40,
+          maxSongs || 1000, // default high number if not set
           includeEnglish,
           includeHindi
         );
-        
-        console.log('Fetched songs:', songs.length);
         setRecommendedSongs(songs);
-        
         if (songs.length === 0) {
           toast({
             title: "No Songs Found",
@@ -64,21 +59,14 @@ const Recommendations = () => {
     };
 
     fetchRecommendations();
-  }, [moodParams, includeEnglish, includeHindi, navigate, toast]);
+  }, [moodParams, includeEnglish, includeHindi, navigate, toast, maxSongs]);
 
-  const handleSongSelect = (song: Song) => {
-    setSelectedSong(song);
-  };
-
-  const handleBackToHome = () => {
-    navigate('/');
-  };
+  const handleSongSelect = (song: Song) => setSelectedSong(song);
+  const handleBackToHome = () => navigate('/');
 
   const { category } = moodParams ? determineSongCategory(moodParams) : { category: '' };
 
-  if (!moodParams) {
-    return null;
-  }
+  if (!moodParams) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
@@ -92,7 +80,6 @@ const Recommendations = () => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Settings
           </Button>
-          
           <div className="text-center">
             <h1 className="text-4xl font-bold text-gray-800 mb-2">
               🎵 Your Music Recommendations
@@ -105,7 +92,6 @@ const Recommendations = () => {
             </p>
           </div>
         </div>
-
         {isLoading ? (
           <RecommendationSkeletonGrid />
         ) : recommendedSongs.length > 0 ? (
@@ -114,7 +100,6 @@ const Recommendations = () => {
               recommendedSongs={recommendedSongs}
               onSongSelect={handleSongSelect}
             />
-            
             <div className="text-center mt-8">
               <p className="text-gray-600">
                 Found {recommendedSongs.length} songs matching your mood
@@ -128,7 +113,6 @@ const Recommendations = () => {
             onBack={handleBackToHome}
           />
         )}
-
         {selectedSong && (
           <SongDetail
             song={selectedSong}
