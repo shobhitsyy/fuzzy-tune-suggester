@@ -2,12 +2,10 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Music } from "lucide-react";
+import { Sparkles, Music, Heart, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { spotifyDatabaseService } from "@/services/spotifyDatabaseService";
-
-// Import EnhancedMoodSelector directly here for the mood/energy/focus controls
 import EnhancedMoodSelector from "@/components/EnhancedMoodSelector";
 
 const Index = () => {
@@ -19,51 +17,88 @@ const Index = () => {
   const [includeEnglish, setIncludeEnglish] = useState(true);
   const [includeHindi, setIncludeHindi] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [isPopulating, setIsPopulating] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // --- Auto-ingest curated songs on first mount ---
+  // Auto-ingest curated songs on first mount
   useEffect(() => {
-    // Add curated (5 eng + 5 hindi) songs on first load, auto and quietly (no toasts).
-    spotifyDatabaseService.addCuratedSongsToDatabase().then(res => {
-      if (res?.added > 0) {
-        // Optionally, you can show a subtle toast for admins, but we'll skip for clean UI.
-        // toast({ title: "Songs updated", description: `${res.added} curated songs now in database.` });
+    const populateSongs = async () => {
+      setIsPopulating(true);
+      try {
+        console.log('Starting song population...');
+        const results = await spotifyDatabaseService.addCuratedSongsToDatabase();
+        console.log('Song population results:', results);
+        
+        if (results?.added > 0) {
+          toast({
+            title: "🎵 Music Library Updated",
+            description: `Added ${results.added} new songs to your collection!`,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to populate songs:', error);
+      } finally {
+        setIsPopulating(false);
       }
-    });
-  }, []);
+    };
 
-  // Subtle background-image and color for visual appeal
-  // Centered, mobile-first container and gradient overlay
+    populateSongs();
+  }, [toast]);
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#f7e8ff] via-[#eff8ff] to-[#c7d1ee] px-2 py-6 relative overflow-hidden">
-      
-      {/* Large floating music wave/artistic background for uniqueness */}
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      {/* Animated Background Elements */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-20 -left-24 sm:-left-40 w-[400px] h-[400px] sm:w-[600px] sm:h-[600px] bg-gradient-to-br from-purple-300/40 to-blue-100 blur-2xl rounded-full z-0 animate-fade-in"></div>
-        <div className="absolute bottom-8 right-8 w-40 h-40 sm:w-80 sm:h-80 bg-purple-200/40 rounded-t-full blur-2xl rotate-12"></div>
+        {/* Large floating music notes */}
+        <div className="absolute top-20 left-10 text-6xl opacity-10 animate-pulse text-purple-400">♪</div>
+        <div className="absolute top-40 right-16 text-4xl opacity-15 animate-bounce text-pink-400">♫</div>
+        <div className="absolute bottom-32 left-20 text-5xl opacity-12 animate-pulse text-blue-400">♬</div>
+        
+        {/* Gradient orbs */}
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-purple-300/30 to-blue-300/30 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-gradient-to-br from-pink-300/30 to-purple-300/30 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-br from-blue-200/20 to-indigo-200/20 rounded-full blur-2xl"></div>
       </div>
       
-      <main className="w-full max-w-md mx-auto flex flex-col gap-8 z-10">
-        {/* LOGO and Title */}
-        <div className="w-full flex justify-center mt-2 mb-3">
-          <div className="flex items-center gap-2">
-            <Music className="h-10 w-10 text-purple-700 animate-fade-in" />
-            <span className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-700 via-blue-900 to-blue-600 bg-clip-text text-transparent drop-shadow-sm tracking-tight select-none">
+      <main className="relative z-10 container mx-auto px-4 py-8 flex flex-col items-center justify-center min-h-screen">
+        {/* Header Section */}
+        <div className="text-center mb-12 space-y-4">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="relative">
+              <Music className="h-12 w-12 text-purple-600 animate-pulse" />
+              <Heart className="h-6 w-6 text-pink-500 absolute -top-2 -right-2 animate-bounce" />
+            </div>
+            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
               Mood Melody
-            </span>
+            </h1>
           </div>
+          
+          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            Discover music that perfectly matches your current vibe. Set your mood and let AI curate the perfect playlist for you.
+          </p>
+          
+          {isPopulating && (
+            <div className="flex items-center justify-center gap-2 text-sm text-purple-600 bg-purple-50 rounded-full px-4 py-2 mx-auto w-fit">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+              <span>Updating music library...</span>
+            </div>
+          )}
         </div>
-        
-        {/* Card with mood selector */}
-        <Card className="bg-white/95 border-none shadow-xl rounded-3xl p-0">
-          <CardHeader className="p-6 pb-2 flex flex-row items-center gap-2">
-            <Sparkles className="h-6 w-6 text-purple-500" />
-            <CardTitle className="text-lg sm:text-xl font-semibold text-blue-900">
+
+        {/* Main Card */}
+        <Card className="w-full max-w-2xl bg-white/80 backdrop-blur-lg border-0 shadow-2xl rounded-3xl overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-8">
+            <CardTitle className="flex items-center gap-3 text-2xl md:text-3xl font-bold">
+              <Zap className="h-8 w-8" />
               Set Your Mood
             </CardTitle>
+            <p className="text-purple-100 mt-2">
+              Tell us how you're feeling and we'll find the perfect songs for you
+            </p>
           </CardHeader>
-          <CardContent className="pt-1 pb-5 px-7 flex flex-col gap-4 items-stretch">
+          
+          <CardContent className="p-8 space-y-8">
             <EnhancedMoodSelector
               moodInputs={moodInputs}
               onMoodChange={setMoodInputs}
@@ -74,6 +109,7 @@ const Index = () => {
                 setIncludeHindi(hin);
               }}
             />
+            
             <Button
               onClick={() => {
                 setLoading(true);
@@ -86,30 +122,37 @@ const Index = () => {
                       maxSongs: 20,
                     }
                   });
-                }, 600);
+                }, 800);
               }}
-              disabled={loading}
-              className="w-full mt-1 bg-gradient-to-r from-purple-600 to-blue-500 text-white font-semibold py-3 text-md rounded-xl shadow hover:scale-105 transition-all"
+              disabled={loading || isPopulating}
+              className="w-full mt-8 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 text-white font-bold py-4 px-8 text-lg rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
             >
               {loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  Generating...
+                <div className="flex items-center justify-center gap-3">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                  <span>Creating Your Playlist...</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5" />
-                  Get Recommendations
+                <div className="flex items-center justify-center gap-3">
+                  <Sparkles className="h-6 w-6" />
+                  <span>Get My Recommendations</span>
+                  <Sparkles className="h-6 w-6" />
                 </div>
               )}
             </Button>
           </CardContent>
         </Card>
 
-        <div className="flex flex-col items-center gap-2 text-xs mt-2 opacity-60 animate-fade-in">
-          <span>
-            Powered by Spotify & Supabase | AI Mood Engine
-          </span>
+        {/* Footer */}
+        <div className="mt-12 text-center space-y-2 opacity-70">
+          <p className="text-sm text-gray-500">
+            Powered by Spotify API & Advanced AI Mood Analysis
+          </p>
+          <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+            <span>✨</span>
+            <span>Personalized Music Discovery</span>
+            <span>✨</span>
+          </div>
         </div>
       </main>
     </div>
@@ -117,4 +160,3 @@ const Index = () => {
 };
 
 export default Index;
-
