@@ -39,10 +39,20 @@ export function useRecommendations({
     }
   };
 
+  const getSimilarSongs = async (songId: string, limit: number = 5) => {
+    try {
+      return await RecommendationService.getSimilarSongs(songId, limit);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get similar songs');
+      return [];
+    }
+  };
+
   return {
     loading,
     error,
     recommendations,
     getRecommendations,
+    getSimilarSongs,
   };
 }

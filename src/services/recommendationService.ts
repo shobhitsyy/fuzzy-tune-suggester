@@ -2,9 +2,9 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export interface MoodParams {
-  energy: number;
-  mood: number;
-  focus: number;
+  energy: number;  // 1-10
+  mood: number;    // 1-10
+  focus: number;   // 1-10
 }
 
 export interface SongRecommendation {
@@ -19,37 +19,38 @@ export interface SongRecommendation {
   release_date?: string;
 }
 
-function getMoodCategory(moodParams: MoodParams): string[] {
-  const categories: string[] = [];
+function getRobustMoodCategories(moodParams: MoodParams): string[] {
+  const cat = [];
 
-  // Energy mapping
+  // Energy mapping (1-10)
   if (moodParams.energy <= 3) {
-    categories.push('calm', 'relaxed');
+    cat.push('calm', 'relaxed', 'mellow');
   } else if (moodParams.energy <= 7) {
-    categories.push('moderate', 'chill');
+    cat.push('moderate', 'chill');
   } else {
-    categories.push('energetic', 'upbeat');
+    cat.push('energetic', 'upbeat', 'fun');
   }
 
-  // Mood mapping
+  // Mood mapping (1-10)
   if (moodParams.mood <= 3) {
-    categories.push('calm', 'relaxed');
+    cat.push('calm', 'relaxed', 'sad', 'emotional');
   } else if (moodParams.mood <= 7) {
-    categories.push('moderate', 'relaxed');
+    cat.push('moderate', 'mellow', 'classic');
   } else {
-    categories.push('upbeat', 'energetic');
+    cat.push('upbeat', 'energetic', 'happy', 'fun');
   }
 
-  // Focus mapping
+  // Focus mapping (1-10)
   if (moodParams.focus <= 3) {
-    categories.push('calm', 'relaxed');
+    cat.push('calm', 'relaxed', 'chill', 'mellow');
   } else if (moodParams.focus <= 7) {
-    categories.push('moderate');
+    cat.push('moderate', 'classic');
   } else {
-    categories.push('energetic', 'upbeat');
+    cat.push('energetic', 'upbeat', 'epic', 'motivational');
   }
 
-  return [...new Set(categories)];
+  // Deduplicate, lowercase to avoid DB mismatch, and slice to top 7 for variety
+  return [...new Set(cat.map(x => x.toLowerCase()))].slice(0, 7);
 }
 
 export class RecommendationService {
@@ -59,13 +60,13 @@ export class RecommendationService {
     includeHindi: boolean,
     maxSongs: number = 20
   ): Promise<SongRecommendation[]> {
-    const categories = getMoodCategory(moodParams);
+    const categories = getRobustMoodCategories(moodParams);
     let languageFilter: string[] = [];
     if (includeEnglish) languageFilter.push('English');
     if (includeHindi) languageFilter.push('Hindi');
     if (languageFilter.length === 0) throw new Error('No language selected');
 
-    // First pass: get top category matches
+    // First, find best matches by BOTH language and mood categories
     let { data: songs, error } = await supabase
       .from('songs')
       .select('id,title,artist,category,language,cover_image,album,duration,release_date')
@@ -75,17 +76,59 @@ export class RecommendationService {
 
     if (error) throw error;
 
-    // If not enough, fill random
+    // Not enough? Fill up with other songs in the selected languages, not just the same IDs
     if (songs && songs.length < maxSongs) {
+      const gotIds = (songs || []).map(s => s.id);
       const { data: fallbackSongs } = await supabase
         .from('songs')
         .select('id,title,artist,category,language,cover_image,album,duration,release_date')
         .in('language', languageFilter)
-        .not('id', 'in', (songs || []).map(s => s.id))
+        .not('id', 'in', gotIds)
         .order('RANDOM()')
         .limit(maxSongs - (songs?.length || 0));
       songs = songs.concat(fallbackSongs || []);
     }
+
+    // Even fewer? Just take random from the selected language if still less than maxSongs
+    if (songs && songs.length < maxSongs) {
+      const gotIds = (songs || []).map(s => s.id);
+      const { data: moreFallback } = await supabase
+        .from('songs')
+        .select('id,title,artist,category,language,cover_image,album,duration,release_date')
+        .in('language', languageFilter)
+        .not('id', 'in', gotIds)
+        .order('RANDOM()')
+        .limit(maxSongs - (songs?.length || 0));
+      songs = songs.concat(moreFallback || []);
+    }
+
+    return (songs as SongRecommendation[]) || [];
+  }
+
+  static async getSimilarSongs(
+    songId: string,
+    maxSongs: number = 5
+  ): Promise<SongRecommendation[]> {
+    // First find the reference song's category and language
+    const { data: song, error } = await supabase
+      .from('songs')
+      .select('category,language')
+      .eq('id', songId)
+      .maybeSingle();
+
+    if (error || !song) throw new Error('Reference song not found');
+
+    // Find similar by category and language, excluding the song itself
+    const { data: songs, error: errorSimilar } = await supabase
+      .from('songs')
+      .select('id,title,artist,category,language,cover_image,album,duration,release_date')
+      .eq('category', song.category)
+      .eq('language', song.language)
+      .neq('id', songId)
+      .order('RANDOM()')
+      .limit(maxSongs);
+
+    if (errorSimilar) throw errorSimilar;
 
     return (songs as SongRecommendation[]) || [];
   }
