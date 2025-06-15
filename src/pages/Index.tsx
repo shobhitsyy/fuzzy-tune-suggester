@@ -1,4 +1,4 @@
-import SeedSongs from "./SeedSongs"; // <-- Import the temp seeder component
+import SeedSongs from "./SeedSongs";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,6 @@ const Index = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Check database stats
   useEffect(() => {
     const checkDatabaseStats = async () => {
       try {
@@ -44,13 +43,10 @@ const Index = () => {
     checkDatabaseStats();
   }, []);
 
-  // Populate curated songs to DB whenever you want (no constraint)
   const handlePopulateSongs = async () => {
     setIsPopulating(true);
     try {
       console.log('Starting song population...');
-
-      // Reset any previous population flags by clearing localStorage
       localStorage.removeItem('songsPopulated');
 
       const results = await spotifyDatabaseService.addCuratedSongsToDatabase();
@@ -61,8 +57,6 @@ const Index = () => {
           title: "🎵 Music Library Updated",
           description: `Added ${results.added} new songs to your collection!`,
         });
-
-        // Update stats
         setDbStats(prev => ({ ...prev, count: prev.count + results.added }));
       } else if (results?.errors > 0) {
         toast({
@@ -90,21 +84,16 @@ const Index = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-      {/* Animated Background Elements */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Large floating music notes */}
         <div className="absolute top-20 left-10 text-6xl opacity-10 animate-pulse text-purple-400">♪</div>
         <div className="absolute top-40 right-16 text-4xl opacity-15 animate-bounce text-pink-400">♫</div>
         <div className="absolute bottom-32 left-20 text-5xl opacity-12 animate-pulse text-blue-400">♬</div>
-
-        {/* Gradient orbs */}
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-purple-300/30 to-blue-300/30 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-gradient-to-br from-pink-300/30 to-purple-300/30 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-br from-blue-200/20 to-indigo-200/20 rounded-full blur-2xl"></div>
       </div>
 
       <main className="relative z-10 container mx-auto px-4 py-8 flex flex-col items-center justify-center min-h-screen">
-        {/* Header Section */}
         <div className="text-center mb-12 space-y-4">
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="relative">
@@ -120,7 +109,6 @@ const Index = () => {
             Discover music that perfectly matches your current vibe. Set your mood and let AI curate the perfect playlist for you.
           </p>
 
-          {/* Database Stats */}
           <div className="flex items-center justify-center gap-4 text-sm text-gray-500">
             <span>🎵 {dbStats.count} songs in library</span>
             {isPopulating && (
@@ -132,7 +120,6 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Main Card */}
         <Card className="w-full max-w-2xl bg-white/80 backdrop-blur-lg border-0 shadow-2xl rounded-3xl overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-8">
             <CardTitle className="flex items-center gap-3 text-2xl md:text-3xl font-bold">
@@ -187,7 +174,6 @@ const Index = () => {
               )}
             </Button>
 
-            {/* Add button to trigger population manually */}
             <Button
               onClick={handlePopulateSongs}
               disabled={isPopulating}
@@ -208,7 +194,6 @@ const Index = () => {
         {/* Render the seeding component temporarily */}
         <SeedSongs />
 
-        {/* Footer */}
         <div className="mt-12 text-center space-y-2 opacity-70">
           <p className="text-sm text-gray-500">
             Powered by Spotify API & Advanced AI Mood Analysis
