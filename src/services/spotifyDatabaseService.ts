@@ -1,4 +1,3 @@
-
 import { spotifyService } from './spotifyService';
 import { supabase } from '@/integrations/supabase/client';
 import { SongCategoryType } from '@/utils/fuzzyLogic';
@@ -34,6 +33,180 @@ const getAudioFeatureCategories = (features: any): SongCategoryType[] => {
   
   // Default to moderate if no category matches
   return categories.length > 0 ? categories : ['moderate'];
+};
+
+// Curated list of popular songs to add to the database
+const curatedSongs = {
+  english: [
+    { name: "Blinding Lights", artist: "The Weeknd" },
+    { name: "Watermelon Sugar", artist: "Harry Styles" },
+    { name: "Levitating", artist: "Dua Lipa" },
+    { name: "Good 4 U", artist: "Olivia Rodrigo" },
+    { name: "Stay", artist: "The Kid LAROI" }
+  ],
+  hindi: [
+    { name: "Kesariya", artist: "Arijit Singh" },
+    { name: "Raataan Lambiyan", artist: "Tanishk Bagchi" },
+    { name: "Mann Meri Jaan", artist: "King" },
+    { name: "Apna Bana Le", artist: "Arijit Singh" },
+    { name: "Pasoori", artist: "Ali Sethi" }
+  ]
+};
+
+// Add curated songs to database
+export const addCuratedSongsToDatabase = async () => {
+  const results = { added: 0, errors: 0, skipped: 0 };
+  
+  try {
+    console.log('Starting to add curated songs to database...');
+    
+    // Check if Spotify API is available
+    const canMakeApiCalls = await spotifyService.canMakeApiCalls();
+    if (!canMakeApiCalls) {
+      throw new Error('Cannot connect to Spotify API');
+    }
+    console.log('Spotify API connection verified');
+
+    // Process English songs
+    for (const song of curatedSongs.english) {
+      try {
+        // Check if song already exists
+        const { data: existingSong } = await supabase
+          .from('songs')
+          .select('id')
+          .eq('title', song.name)
+          .eq('artist', song.artist)
+          .single();
+
+        if (existingSong) {
+          console.log(`Song already exists: ${song.name} by ${song.artist}`);
+          results.skipped++;
+          continue;
+        }
+
+        // Search for the song on Spotify
+        const spotifyTrack = await spotifyService.searchSpecificTrack(song.name, song.artist);
+        
+        if (spotifyTrack) {
+          // Get audio features to determine category
+          const audioFeatures = await spotifyService.getAudioFeatures([spotifyTrack.id]);
+          const categories = audioFeatures && audioFeatures[0] ? 
+            getAudioFeatureCategories(audioFeatures[0]) : ['moderate'];
+
+          // Generate unique ID
+          const songId = `spotify-eng-${spotifyTrack.id}`;
+          
+          // Add to database
+          const { error: insertError } = await supabase
+            .from('songs')
+            .insert({
+              id: songId,
+              title: spotifyTrack.name,
+              artist: spotifyTrack.artists[0]?.name || song.artist,
+              album: spotifyTrack.album?.name || 'Unknown Album',
+              release_date: '2023-01-01',
+              language: 'English',
+              category: categories[0],
+              cover_image: spotifyTrack.album?.images?.[0]?.url || '/placeholder.svg',
+              duration: `${Math.floor(spotifyTrack.duration_ms / 60000)}:${String(Math.floor((spotifyTrack.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
+              spotify_url: spotifyTrack.external_urls?.spotify,
+              tags: [categories[0], 'english', song.artist.toLowerCase().replace(/\s+/g, '-')],
+              description: `${spotifyTrack.name} by ${song.artist} - A popular English track.`
+            });
+
+          if (!insertError) {
+            console.log(`Added English song: ${song.name} by ${song.artist}`);
+            results.added++;
+          } else {
+            console.error(`Error adding English song ${song.name}:`, insertError);
+            results.errors++;
+          }
+        } else {
+          console.warn(`Could not find ${song.name} by ${song.artist} on Spotify`);
+          results.errors++;
+        }
+
+        // Add delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (error) {
+        console.error(`Error processing English song ${song.name}:`, error);
+        results.errors++;
+      }
+    }
+
+    // Process Hindi songs
+    for (const song of curatedSongs.hindi) {
+      try {
+        // Check if song already exists
+        const { data: existingSong } = await supabase
+          .from('songs')
+          .select('id')
+          .eq('title', song.name)
+          .eq('artist', song.artist)
+          .single();
+
+        if (existingSong) {
+          console.log(`Song already exists: ${song.name} by ${song.artist}`);
+          results.skipped++;
+          continue;
+        }
+
+        // Search for the song on Spotify
+        const spotifyTrack = await spotifyService.searchSpecificTrack(song.name, song.artist);
+        
+        if (spotifyTrack) {
+          // Get audio features to determine category
+          const audioFeatures = await spotifyService.getAudioFeatures([spotifyTrack.id]);
+          const categories = audioFeatures && audioFeatures[0] ? 
+            getAudioFeatureCategories(audioFeatures[0]) : ['moderate'];
+
+          // Generate unique ID
+          const songId = `spotify-hin-${spotifyTrack.id}`;
+          
+          // Add to database
+          const { error: insertError } = await supabase
+            .from('songs')
+            .insert({
+              id: songId,
+              title: spotifyTrack.name,
+              artist: spotifyTrack.artists[0]?.name || song.artist,
+              album: spotifyTrack.album?.name || 'Unknown Album',
+              release_date: '2023-01-01',
+              language: 'Hindi',
+              category: categories[0],
+              cover_image: spotifyTrack.album?.images?.[0]?.url || '/placeholder.svg',
+              duration: `${Math.floor(spotifyTrack.duration_ms / 60000)}:${String(Math.floor((spotifyTrack.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
+              spotify_url: spotifyTrack.external_urls?.spotify,
+              tags: [categories[0], 'hindi', song.artist.toLowerCase().replace(/\s+/g, '-')],
+              description: `${spotifyTrack.name} by ${song.artist} - A popular Hindi track.`
+            });
+
+          if (!insertError) {
+            console.log(`Added Hindi song: ${song.name} by ${song.artist}`);
+            results.added++;
+          } else {
+            console.error(`Error adding Hindi song ${song.name}:`, insertError);
+            results.errors++;
+          }
+        } else {
+          console.warn(`Could not find ${song.name} by ${song.artist} on Spotify`);
+          results.errors++;
+        }
+
+        // Add delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (error) {
+        console.error(`Error processing Hindi song ${song.name}:`, error);
+        results.errors++;
+      }
+    }
+
+    console.log('Finished adding curated songs:', results);
+    return results;
+  } catch (error) {
+    console.error('Error adding curated songs:', error);
+    throw error;
+  }
 };
 
 // Search for songs on Spotify and get their data
@@ -159,8 +332,8 @@ const discoverSongsForCategory = async (category: SongCategoryType, limit: numbe
               title: track.name,
               artist: track.artists?.[0]?.name || 'Unknown Artist',
               album: track.album?.name || 'Unknown Album',
-              release_date: '2023-01-01', // Default date since Spotify API might not provide this
-              language: 'English', // Default for Spotify tracks
+              release_date: '2023-01-01',
+              language: 'English',
               category: categories[0],
               cover_image: track.album?.images?.[0]?.url || '/placeholder.svg',
               duration: `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
@@ -214,5 +387,6 @@ export const updateAllCategories = async () => {
 export const spotifyDatabaseService = {
   enrichExistingSongs,
   updateAllCategories,
-  discoverSongsForCategory
+  discoverSongsForCategory,
+  addCuratedSongsToDatabase
 };

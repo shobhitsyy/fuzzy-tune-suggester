@@ -36,6 +36,7 @@ interface SpotifySearchParams {
 class SpotifyService {
   private config: SpotifyConfig;
   private accessToken: string | null = null;
+  private clientCredentialsToken: string | null = null;
 
   constructor() {
     this.config = {
@@ -58,6 +59,36 @@ class SpotifyService {
     this.accessToken = localStorage.getItem('spotify_access_token');
   }
 
+  // Get client credentials token for API access without user auth
+  async getClientCredentialsToken(): Promise<string> {
+    if (this.clientCredentialsToken) {
+      return this.clientCredentialsToken;
+    }
+
+    try {
+      const response = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${btoa(`${this.config.clientId}:${this.config.clientSecret}`)}`
+        },
+        body: 'grant_type=client_credentials'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get client credentials token');
+      }
+
+      const data = await response.json();
+      this.clientCredentialsToken = data.access_token;
+      console.log('Got Spotify client credentials token');
+      return this.clientCredentialsToken;
+    } catch (error) {
+      console.error('Error getting client credentials token:', error);
+      throw error;
+    }
+  }
+
   // Set Spotify client ID (backwards compatibility)
   setClientId(clientId: string) {
     this.config.clientId = clientId;
@@ -72,6 +103,19 @@ class SpotifyService {
   // Check if Spotify is authenticated
   isAuthenticated(): boolean {
     return !!this.accessToken;
+  }
+
+  // Check if we can make API calls (either user auth or client credentials)
+  async canMakeApiCalls(): Promise<boolean> {
+    if (this.accessToken) {
+      return true;
+    }
+    try {
+      await this.getClientCredentialsToken();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // Generate Spotify authorization URL
@@ -105,18 +149,23 @@ class SpotifyService {
     return false;
   }
 
+  // Get appropriate token for API calls
+  private async getApiToken(): Promise<string> {
+    if (this.accessToken) {
+      return this.accessToken;
+    }
+    return await this.getClientCredentialsToken();
+  }
+
   // Search for tracks based on mood and preferences
   async searchTracks(params: SpotifySearchParams): Promise<SpotifyTrack[]> {
-    if (!this.isAuthenticated()) {
-      throw new Error('Not authenticated with Spotify');
-    }
-
     try {
+      const token = await this.getApiToken();
       let query = '';
       
       // Build query based on mood parameters
       if (params.mood) {
-        query += `genre:"${params.mood}" `;
+        query += `${params.mood} `;
       }
       
       // Add language-specific search terms
@@ -127,10 +176,10 @@ class SpotifyService {
       }
 
       const response = await fetch(
-        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=${params.limit || 20}`,
+        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query.trim() || 'pop')}&type=track&limit=${params.limit || 20}`,
         {
           headers: {
-            'Authorization': `Bearer ${this.accessToken}`
+            'Authorization': `Bearer ${token}`
           }
         }
       );
@@ -151,18 +200,43 @@ class SpotifyService {
     }
   }
 
+  // Search for specific track by name and artist
+  async searchSpecificTrack(trackName: string, artistName: string): Promise<SpotifyTrack | null> {
+    try {
+      const token = await this.getApiToken();
+      const query = `track:"${trackName}" artist:"${artistName}"`;
+      
+      const response = await fetch(
+        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to search for specific track');
+      }
+
+      const data = await response.json();
+      return data.tracks.items[0] || null;
+    } catch (error) {
+      console.error('Error searching for specific track:', error);
+      return null;
+    }
+  }
+
   // Get audio features for tracks
   async getAudioFeatures(trackIds: string[]): Promise<any[]> {
-    if (!this.isAuthenticated()) {
-      throw new Error('Not authenticated with Spotify');
-    }
-
     try {
+      const token = await this.getApiToken();
+
       const response = await fetch(
         `https://api.spotify.com/v1/audio-features?ids=${trackIds.join(',')}`,
         {
           headers: {
-            'Authorization': `Bearer ${this.accessToken}`
+            'Authorization': `Bearer ${token}`
           }
         }
       );
@@ -256,6 +330,7 @@ class SpotifyService {
   // Logout and clear tokens
   logout() {
     this.accessToken = null;
+    this.clientCredentialsToken = null;
     localStorage.removeItem('spotify_access_token');
     localStorage.removeItem('spotify_client_id');
   }

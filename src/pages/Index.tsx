@@ -1,91 +1,64 @@
 
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Slider } from '@/components/ui/slider';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Heart, Activity, Music, Info } from 'lucide-react';
-import { calculateMembership, SongCategoryType, Song } from '@/utils/fuzzyLogic';
-import SongCard from '@/components/SongCard';
-import SongDetail from '@/components/SongDetail';
-import { useToast } from '@/hooks/use-toast';
-import { getRecommendedSongs, isDatabasePopulated } from '@/services/songService';
-import SpotifyIntegration from '@/components/SpotifyIntegration';
-import SpotifyFeatures from '@/components/SpotifyFeatures';
-import SpotifyDatabaseManager from '@/components/SpotifyDatabaseManager';
+import { useState, useEffect } from "react";
+import MoodSelector from "@/components/MoodSelector";
+import EnhancedMoodSelector from "@/components/EnhancedMoodSelector";
+import UserPreferences from "@/components/UserPreferences";
+import SongCard from "@/components/SongCard";
+import SpotifyIntegration from "@/components/SpotifyIntegration";
+import SpotifyDatabaseManager from "@/components/SpotifyDatabaseManager";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { calculateMoodMemberships, type MoodInputs, type Song } from "@/utils/fuzzyLogic";
+import { getRecommendedSongs, isDatabasePopulated } from "@/services/songService";
+import { Music, Sparkles, Heart, Users, TrendingUp } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
-  const [heartRate, setHeartRate] = useState<number>(70);
-  const [activity, setActivity] = useState<number>(5);
-  const [mood, setMood] = useState<number>(5);
-  const [includeEnglish, setIncludeEnglish] = useState<boolean>(true);
-  const [includeHindi, setIncludeHindi] = useState<boolean>(true);
-  const [recommendedSongs, setRecommendedSongs] = useState<Song[]>([]);
-  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isDbInitialized, setIsDbInitialized] = useState<boolean>(false);
-  const [isDbLoading, setIsDbLoading] = useState<boolean>(true);
+  const [moodInputs, setMoodInputs] = useState<MoodInputs>({
+    energy: 5,
+    mood: 5,
+    focus: 5
+  });
+  const [preferences, setPreferences] = useState({
+    includeEnglish: true,
+    includeHindi: true
+  });
+  const [recommendations, setRecommendations] = useState<Song[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [hasDatabase, setHasDatabase] = useState(false);
   const { toast } = useToast();
 
+  // Check database on component mount
   useEffect(() => {
     const checkDatabase = async () => {
       try {
-        const isPopulated = await isDatabasePopulated();
-        console.log('Database check result:', isPopulated);
-        setIsDbInitialized(isPopulated);
-        
-        if (!isPopulated) {
-          toast({
-            title: "No Songs Found",
-            description: "The song database appears to be empty. Please check your database.",
-            variant: "destructive",
-          });
-        }
+        const populated = await isDatabasePopulated();
+        setHasDatabase(populated);
+        console.log('Database populated:', populated);
       } catch (error) {
         console.error('Error checking database:', error);
-        toast({
-          title: "Database Error",
-          description: "Failed to check the song database.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsDbLoading(false);
+        setHasDatabase(false);
       }
     };
 
     checkDatabase();
-  }, [toast]);
+  }, []);
 
-  const handleGenerateRecommendations = async () => {
-    if (!includeEnglish && !includeHindi) {
-      toast({
-        title: "Language Selection Required",
-        description: "Please select at least one language for recommendations.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    setRecommendedSongs([]);
-
+  const generateRecommendations = async () => {
+    setLoading(true);
     try {
-      // Calculate fuzzy memberships based on user inputs
-      const memberships = calculateMembership(heartRate, activity, mood);
+      console.log('Generating recommendations with inputs:', moodInputs, preferences);
+
+      // Calculate fuzzy logic memberships
+      const memberships = calculateMoodMemberships(moodInputs);
       console.log('Calculated memberships:', memberships);
-      
-      // Find the primary category (highest membership value)
-      let primaryCategory: SongCategoryType = 'moderate';
-      let maxMembership = 0;
-      
-      Object.entries(memberships).forEach(([category, value]) => {
-        if (typeof value === 'number' && value > maxMembership) {
-          maxMembership = value;
-          primaryCategory = category as SongCategoryType;
-        }
-      });
+
+      // Find primary category (highest membership)
+      const primaryCategory = Object.entries(memberships).reduce((a, b) => 
+        memberships[a[0] as keyof typeof memberships] > memberships[b[0] as keyof typeof memberships] ? a : b
+      )[0] as keyof typeof memberships;
 
       console.log('Primary category:', primaryCategory);
 
@@ -94,272 +67,219 @@ const Index = () => {
         primaryCategory,
         memberships,
         20,
-        includeEnglish,
-        includeHindi
+        preferences.includeEnglish,
+        preferences.includeHindi
       );
 
-      setRecommendedSongs(songs);
-      
+      console.log('Recommendations received:', songs.length);
+      setRecommendations(songs);
+
       if (songs.length === 0) {
         toast({
-          title: "No Songs Found",
-          description: "No songs match your current preferences. Try adjusting your mood parameters or language preferences.",
-          variant: "destructive",
+          title: "No Recommendations Found",
+          description: "Try adjusting your preferences or mood settings.",
+          variant: "destructive"
         });
       } else {
         toast({
-          title: "Recommendations Ready",
-          description: `Found ${songs.length} songs matching your mood.`,
+          title: "Recommendations Generated!",
+          description: `Found ${songs.length} songs matching your mood.`
         });
       }
     } catch (error) {
       console.error('Error generating recommendations:', error);
       toast({
-        title: "Recommendation Error",
-        description: "Failed to generate song recommendations. Please try again.",
-        variant: "destructive",
+        title: "Error",
+        description: "Failed to generate recommendations. Please try again.",
+        variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
-
-  const handleSongClick = (song: Song) => {
-    setSelectedSong(song);
-  };
-
-  const handleCloseDialog = () => {
-    setSelectedSong(null);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Music Mood Generator</h1>
-          <p className="text-gray-600">Discover songs that match your current mood and activity level</p>
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-center gap-3">
+            <div className="p-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full">
+              <Music className="h-8 w-8 text-white" />
+            </div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              Music Mood Generator
+            </h1>
+          </div>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Discover the perfect songs for your current mood using advanced fuzzy logic and personalized recommendations.
+          </p>
+        </div>
+
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-gradient-to-br from-purple-100 to-purple-50 border-purple-200">
+            <CardContent className="p-4 text-center">
+              <Sparkles className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+              <h3 className="font-semibold text-purple-800">Smart Recommendations</h3>
+              <p className="text-sm text-purple-600">AI-powered mood analysis</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-blue-100 to-blue-50 border-blue-200">
+            <CardContent className="p-4 text-center">
+              <Heart className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+              <h3 className="font-semibold text-blue-800">Personalized</h3>
+              <p className="text-sm text-blue-600">Tailored to your preferences</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-green-100 to-green-50 border-green-200">
+            <CardContent className="p-4 text-center">
+              <Users className="h-8 w-8 mx-auto mb-2 text-green-600" />
+              <h3 className="font-semibold text-green-800">Multi-Language</h3>
+              <p className="text-sm text-green-600">English & Hindi songs</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-orange-100 to-orange-50 border-orange-200">
+            <CardContent className="p-4 text-center">
+              <TrendingUp className="h-8 w-8 mx-auto mb-2 text-orange-600" />
+              <h3 className="font-semibold text-orange-800">Spotify Integration</h3>
+              <p className="text-sm text-orange-600">Direct playlist creation</p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Spotify Integration */}
-        <div className="mb-8">
-          <SpotifyIntegration onAuthSuccess={() => {
-            console.log('Spotify authenticated successfully');
-          }} />
-        </div>
+        <SpotifyIntegration />
 
-        {/* Spotify Database Management */}
-        <div className="mb-8">
-          <SpotifyDatabaseManager />
-        </div>
+        {/* Database Management */}
+        <SpotifyDatabaseManager />
 
-        {/* User Preferences */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Heart Rate */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-rose-800">
-                <Heart className="h-5 w-5 text-rose-600" />
-                Heart Rate
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">BPM</span>
-                  <span className="text-2xl font-bold text-rose-600">{heartRate}</span>
-                </div>
-                <Slider
-                  value={[heartRate]}
-                  min={50}
-                  max={180}
-                  step={1}
-                  onValueChange={(value) => setHeartRate(value[0])}
-                  className="py-4"
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Controls */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Enhanced Mood Selector */}
+            <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-purple-600" />
+                  Enhanced Mood Selection
+                </CardTitle>
+                <CardDescription>
+                  Use our advanced mood selector for precise recommendations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <EnhancedMoodSelector 
+                  onMoodChange={setMoodInputs}
+                  currentMood={moodInputs}
                 />
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>Resting (50)</span>
-                  <span>Moderate (110)</span>
-                  <span>Intense (180)</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Activity Level */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-blue-800">
-                <Activity className="h-5 w-5 text-blue-600" />
-                Activity Level
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Level</span>
-                  <span className="text-2xl font-bold text-blue-600">{activity}/10</span>
-                </div>
-                <Slider
-                  value={[activity]}
-                  min={1}
-                  max={10}
-                  step={1}
-                  onValueChange={(value) => setActivity(value[0])}
-                  className="py-4"
+            {/* Basic Mood Selector */}
+            <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-xl">
+              <CardHeader>
+                <CardTitle>Quick Mood Selector</CardTitle>
+                <CardDescription>
+                  Simple sliders for energy, mood, and focus
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MoodSelector 
+                  onMoodChange={setMoodInputs}
+                  currentMood={moodInputs}
                 />
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>Relaxed (1)</span>
-                  <span>Moderate (5)</span>
-                  <span>Energetic (10)</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Mood */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-amber-800">
-                <Music className="h-5 w-5 text-amber-600" />
-                Current Mood
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Mood</span>
-                  <span className="text-2xl font-bold text-amber-600">{mood}/10</span>
-                </div>
-                <Slider
-                  value={[mood]}
-                  min={1}
-                  max={10}
-                  step={1}
-                  onValueChange={(value) => setMood(value[0])}
-                  className="py-4"
+            {/* User Preferences */}
+            <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-xl">
+              <CardHeader>
+                <CardTitle>Your Preferences</CardTitle>
+                <CardDescription>
+                  Customize your music recommendations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <UserPreferences 
+                  onPreferencesChange={setPreferences}
+                  currentPreferences={preferences}
                 />
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>Sad (1)</span>
-                  <span>Neutral (5)</span>
-                  <span>Happy (10)</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
 
-        {/* Language Preferences */}
-        <Card className="mb-8">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-gray-800">Language Preferences</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="english"
-                  checked={includeEnglish}
-                  onCheckedChange={setIncludeEnglish}
-                />
-                <Label htmlFor="english">English Songs</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="hindi"
-                  checked={includeHindi}
-                  onCheckedChange={setIncludeHindi}
-                />
-                <Label htmlFor="hindi">Hindi Songs</Label>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            {/* Generate Button */}
+            <Button 
+              onClick={generateRecommendations}
+              disabled={loading || !hasDatabase}
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-6 text-lg shadow-lg transform transition-all duration-200 hover:scale-105"
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  Generating Magic...
+                </div>
+              ) : !hasDatabase ? (
+                "Database Loading..."
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5" />
+                  Generate Recommendations
+                </div>
+              )}
+            </Button>
 
-        {/* Generate Button */}
-        <div className="flex justify-center mb-8">
-          <Button 
-            onClick={handleGenerateRecommendations} 
-            disabled={isLoading || isDbLoading || (!includeEnglish && !includeHindi)}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-6 text-lg rounded-xl"
-          >
-            {isLoading ? (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                <span>Generating...</span>
-              </div>
-            ) : (
-              <span>Generate Music Recommendations</span>
+            {!hasDatabase && (
+              <Card className="bg-yellow-50 border-yellow-200">
+                <CardContent className="p-4">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Database Status:</strong> Checking song database... If this persists, try using the Spotify Database Manager above to add songs.
+                  </p>
+                </CardContent>
+              </Card>
             )}
-          </Button>
+          </div>
+
+          {/* Right Column - Results */}
+          <div className="lg:col-span-2">
+            <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Music className="h-5 w-5 text-blue-600" />
+                  Your Music Recommendations
+                  {recommendations.length > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {recommendations.length} songs
+                    </Badge>
+                  )}
+                </CardTitle>
+                <CardDescription>
+                  Songs perfectly matched to your current mood and preferences
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {recommendations.length === 0 ? (
+                  <div className="text-center py-12 space-y-4">
+                    <div className="mx-auto w-24 h-24 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center">
+                      <Music className="h-12 w-12 text-purple-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-700">Ready to Find Your Perfect Songs?</h3>
+                    <p className="text-gray-500">
+                      Set your mood and preferences, then click "Generate Recommendations" to discover music that matches your vibe.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {recommendations.map((song) => (
+                      <SongCard key={song.id} song={song} />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
-
-        {/* Spotify Features */}
-        {recommendedSongs.length > 0 && (
-          <div className="mb-8">
-            <SpotifyFeatures 
-              recommendedSongs={recommendedSongs}
-              currentMood={{ heartRate, activity, mood }}
-            />
-          </div>
-        )}
-
-        {/* Results */}
-        {recommendedSongs.length > 0 && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-800">Your Recommendations</h2>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Info className="h-4 w-4" />
-                <span>Click on a song to see details</span>
-              </div>
-            </div>
-
-            <Tabs defaultValue="all" className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger value="all">All Songs</TabsTrigger>
-                <TabsTrigger value="english">English</TabsTrigger>
-                <TabsTrigger value="hindi">Hindi</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="all">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {recommendedSongs.map((song) => (
-                    <SongCard key={song.id} song={song} onClick={handleSongClick} />
-                  ))}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="english">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {recommendedSongs
-                    .filter((song) => song.language === 'English')
-                    .map((song) => (
-                      <SongCard key={song.id} song={song} onClick={handleSongClick} />
-                    ))}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="hindi">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {recommendedSongs
-                    .filter((song) => song.language === 'Hindi')
-                    .map((song) => (
-                      <SongCard key={song.id} song={song} onClick={handleSongClick} />
-                    ))}
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        )}
-
-        {/* Song Details Dialog */}
-        <SongDetail 
-          song={selectedSong} 
-          isOpen={!!selectedSong} 
-          onClose={handleCloseDialog}
-          onSelectSimilar={handleSongClick}
-        />
       </div>
     </div>
   );

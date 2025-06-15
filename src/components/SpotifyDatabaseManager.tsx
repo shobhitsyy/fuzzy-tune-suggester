@@ -7,26 +7,45 @@ import { Progress } from '@/components/ui/progress';
 import { spotifyService } from '@/services/spotifyService';
 import { spotifyDatabaseService } from '@/services/spotifyDatabaseService';
 import { useToast } from '@/hooks/use-toast';
-import { Database, RefreshCw, TrendingUp, AlertCircle } from 'lucide-react';
+import { Database, RefreshCw, TrendingUp, AlertCircle, Plus } from 'lucide-react';
 import { SongCategory } from '@/utils/fuzzyLogic';
 
 const SpotifyDatabaseManager: React.FC = () => {
   const [isEnriching, setIsEnriching] = useState(false);
   const [isDiscovering, setIsDiscovering] = useState(false);
+  const [isAddingCurated, setIsAddingCurated] = useState(false);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<any>(null);
   const { toast } = useToast();
 
-  const handleEnrichExisting = async () => {
-    if (!spotifyService.isAuthenticated()) {
+  const handleAddCuratedSongs = async () => {
+    setIsAddingCurated(true);
+    setProgress(0);
+    setResults(null);
+
+    try {
+      const results = await spotifyDatabaseService.addCuratedSongsToDatabase();
+      setResults(results);
+      setProgress(100);
+
       toast({
-        title: "Spotify Not Connected",
-        description: "Please connect to Spotify first to enrich the database.",
+        title: "Songs Added Successfully",
+        description: `Added ${results.added} new songs (${results.skipped} already existed).`,
+      });
+    } catch (error) {
+      console.error('Add curated songs error:', error);
+      toast({
+        title: "Failed to Add Songs",
+        description: error instanceof Error ? error.message : "Failed to add curated songs.",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setIsAddingCurated(false);
+      setProgress(0);
     }
+  };
 
+  const handleEnrichExisting = async () => {
     setIsEnriching(true);
     setProgress(0);
     setResults(null);
@@ -67,15 +86,6 @@ const SpotifyDatabaseManager: React.FC = () => {
   };
 
   const handleDiscoverNew = async () => {
-    if (!spotifyService.isAuthenticated()) {
-      toast({
-        title: "Spotify Not Connected",
-        description: "Please connect to Spotify first to discover new songs.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsDiscovering(true);
     setProgress(0);
     setResults(null);
@@ -113,39 +123,50 @@ const SpotifyDatabaseManager: React.FC = () => {
     }
   };
 
-  if (!spotifyService.isAuthenticated()) {
-    return (
-      <Card className="bg-yellow-50 border-yellow-200">
-        <CardContent className="flex items-center gap-3 p-4">
-          <AlertCircle className="h-5 w-5 text-yellow-600" />
-          <div>
-            <p className="font-medium text-yellow-800">Spotify Required</p>
-            <p className="text-sm text-yellow-600">Connect to Spotify to manage the song database</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card className="bg-blue-50 border-blue-200">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-blue-800">
           <Database className="h-5 w-5" />
-          Database Management
+          Spotify Database Management
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Add Curated Songs */}
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm">Add Popular Songs</h4>
+            <p className="text-xs text-gray-600">
+              Add 10 popular songs (5 English, 5 Hindi) with Spotify data
+            </p>
+            <Button
+              onClick={handleAddCuratedSongs}
+              disabled={isAddingCurated || isEnriching || isDiscovering}
+              className="w-full bg-green-500 hover:bg-green-600 text-white"
+            >
+              {isAddingCurated ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Adding...</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  <span>Add Songs</span>
+                </div>
+              )}
+            </Button>
+          </div>
+
           {/* Enrich Existing Songs */}
           <div className="space-y-3">
-            <h4 className="font-medium text-sm">Enrich Existing Songs</h4>
+            <h4 className="font-medium text-sm">Enrich Existing</h4>
             <p className="text-xs text-gray-600">
-              Add Spotify URLs, cover images, and audio features to existing songs
+              Add Spotify URLs and cover images to existing songs
             </p>
             <Button
               onClick={handleEnrichExisting}
-              disabled={isEnriching || isDiscovering}
+              disabled={isEnriching || isDiscovering || isAddingCurated}
               className="w-full bg-blue-500 hover:bg-blue-600 text-white"
             >
               {isEnriching ? (
@@ -156,7 +177,7 @@ const SpotifyDatabaseManager: React.FC = () => {
               ) : (
                 <div className="flex items-center gap-2">
                   <RefreshCw className="h-4 w-4" />
-                  <span>Enrich Database</span>
+                  <span>Enrich</span>
                 </div>
               )}
             </Button>
@@ -164,14 +185,14 @@ const SpotifyDatabaseManager: React.FC = () => {
 
           {/* Discover New Songs */}
           <div className="space-y-3">
-            <h4 className="font-medium text-sm">Discover New Songs</h4>
+            <h4 className="font-medium text-sm">Discover New</h4>
             <p className="text-xs text-gray-600">
               Find and add new songs using Spotify's recommendation engine
             </p>
             <Button
               onClick={handleDiscoverNew}
-              disabled={isEnriching || isDiscovering}
-              className="w-full bg-green-500 hover:bg-green-600 text-white"
+              disabled={isEnriching || isDiscovering || isAddingCurated}
+              className="w-full bg-purple-500 hover:bg-purple-600 text-white"
             >
               {isDiscovering ? (
                 <div className="flex items-center gap-2">
@@ -181,7 +202,7 @@ const SpotifyDatabaseManager: React.FC = () => {
               ) : (
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4" />
-                  <span>Discover Songs</span>
+                  <span>Discover</span>
                 </div>
               )}
             </Button>
@@ -189,7 +210,7 @@ const SpotifyDatabaseManager: React.FC = () => {
         </div>
 
         {/* Progress Bar */}
-        {(isEnriching || isDiscovering) && progress > 0 && (
+        {(isEnriching || isDiscovering || isAddingCurated) && progress > 0 && (
           <div className="space-y-2">
             <Progress value={progress} className="w-full" />
             <p className="text-xs text-center text-gray-600">
@@ -230,14 +251,23 @@ const SpotifyDatabaseManager: React.FC = () => {
                 </div>
               </div>
             ) : (
-              // Enrichment results
+              // Enrichment or Add results
               <div className="flex gap-2 flex-wrap">
-                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                  {results.updated} Songs Updated
-                </Badge>
-                <Badge variant="secondary" className="bg-green-100 text-green-800">
-                  {results.newSongs} New Songs
-                </Badge>
+                {results.added !== undefined && (
+                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    {results.added} Songs Added
+                  </Badge>
+                )}
+                {results.updated !== undefined && (
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    {results.updated} Songs Updated
+                  </Badge>
+                )}
+                {results.skipped !== undefined && results.skipped > 0 && (
+                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                    {results.skipped} Skipped
+                  </Badge>
+                )}
                 {results.errors > 0 && (
                   <Badge variant="destructive">
                     {results.errors} Errors
