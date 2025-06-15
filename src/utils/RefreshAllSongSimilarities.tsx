@@ -2,59 +2,58 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Utility to refresh the song_similarities table so every song has exactly 3 "similar songs".
- * - Removes all previous entries for a song before inserting new ones.
- * - Prefers matching category/language, or falls back to any other song.
- * - Inserts both directional relationships: (A,B) and (B,A).
+ * Completely clears and repopulates the song_similarities table so that every song has 3 similar songs
+ * of the SAME CATEGORY (if enough possible). Adds both (A,B) and (B,A) directions.
+ * No fallback to other categories, strict match only.
  */
 export async function refreshAllSongSimilarities() {
-  // Fetch all songs
+  // 1. Clear the song_similarities table (truncate all records)
+  const { error: deleteError } = await supabase
+    .from("song_similarities")
+    .delete()
+    .neq("id", ""); // delete all where id != ''
+
+  if (deleteError) {
+    throw new Error("Failed to clear song_similarities: " + deleteError.message);
+  }
+
+  // 2. Fetch all songs
   const { data: allSongs, error: fetchSongsError } = await supabase
     .from("songs")
-    .select("id,category,language");
+    .select("id,category");
   if (fetchSongsError || !allSongs) {
     throw new Error("Failed to fetch songs: " + fetchSongsError?.message);
   }
 
-  let updatedCount = 0;
+  // 3. For each song, pick 3 other songs of same category
+  let bulkSimilarities: any[] = [];
   for (const song of allSongs) {
-    // Remove old similarities for this song (both directions for cleanliness)
-    await supabase
-      .from("song_similarities")
-      .delete()
-      .or(`song_id.eq.${song.id},similar_song_id.eq.${song.id}`);
-
-    // Pick up to 3 other songs to be similar
-    const candidateSameCatLang = allSongs.filter(
-      (s) =>
-        s.id !== song.id &&
-        s.category === song.category &&
-        s.language === song.language
-    );
-    let finalCandidates = candidateSameCatLang;
-    if (finalCandidates.length < 3) {
-      finalCandidates = allSongs.filter((s) => s.id !== song.id);
-    }
+    const sameCategory = allSongs.filter(s => s.id !== song.id && s.category === song.category);
     // Shuffle
-    for (let i = finalCandidates.length - 1; i > 0; i--) {
+    for (let i = sameCategory.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [finalCandidates[i], finalCandidates[j]] = [finalCandidates[j], finalCandidates[i]];
+      [sameCategory[i], sameCategory[j]] = [sameCategory[j], sameCategory[i]];
     }
-    const pick = finalCandidates.slice(0, 3);
+    const picks = sameCategory.slice(0, 3);
 
-    // Insert new similarities (both directions, unique id per pair)
-    const similarities = [];
-    for (const simSong of pick) {
-      similarities.push(
-        { id: `${song.id}-${simSong.id}`, song_id: song.id, similar_song_id: simSong.id },
-        { id: `${simSong.id}-${song.id}`, song_id: simSong.id, similar_song_id: song.id }
+    for (const sim of picks) {
+      bulkSimilarities.push(
+        { id: `${song.id}-${sim.id}`, song_id: song.id, similar_song_id: sim.id },
+        { id: `${sim.id}-${song.id}`, song_id: sim.id, similar_song_id: song.id }
       );
     }
-    if (similarities.length > 0) {
-      await supabase.from("song_similarities").upsert(similarities, { onConflict: "id" });
-      updatedCount++;
+  }
+
+  // 4. Insert new similarities in bulk
+  if (bulkSimilarities.length > 0) {
+    const { error: insertError } = await supabase
+      .from("song_similarities")
+      .upsert(bulkSimilarities, { onConflict: "id" });
+    if (insertError) {
+      throw new Error("Failed to insert song_similarities: " + insertError.message);
     }
   }
-  console.log(`Refreshed similarities for ${updatedCount} songs.`);
-  return updatedCount;
+  console.log(`Rebuilt similarities for ${allSongs.length} songs, total pairs: ${bulkSimilarities.length}`);
+  return allSongs.length;
 }
+
