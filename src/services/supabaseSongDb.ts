@@ -32,6 +32,61 @@ async function generateNextSongId(language: string, category: string): Promise<s
   return `${langCode}-${catCode}-${maxNum + 1}`;
 }
 
+/**
+ * Generate similarities for a single song
+ */
+async function generateSimilaritiesForSong(songId: string, category: string, language: string) {
+  // Get all other songs, preferring same category and language
+  const { data: allSongs, error } = await supabase
+    .from('songs')
+    .select('id, category, language')
+    .neq('id', songId);
+
+  if (error || !allSongs) {
+    console.error('Error fetching songs for similarities:', error);
+    return;
+  }
+
+  // Priority: same category and language > same category > same language > any
+  const sameCategory = allSongs.filter(s => s.category === category && s.language === language);
+  const sameCategoryOtherLang = allSongs.filter(s => s.category === category && s.language !== language);
+  const sameLangOtherCategory = allSongs.filter(s => s.language === language && s.category !== category);
+  const others = allSongs.filter(s => s.category !== category && s.language !== language);
+
+  // Shuffle each group
+  [sameCategory, sameCategoryOtherLang, sameLangOtherCategory, others].forEach(group => {
+    for (let i = group.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [group[i], group[j]] = [group[j], group[i]];
+    }
+  });
+
+  // Pick up to 3 songs, preferring higher priority groups
+  const picks = [];
+  const candidates = [...sameCategory, ...sameCategoryOtherLang, ...sameLangOtherCategory, ...others];
+  
+  for (let i = 0; i < Math.min(3, candidates.length); i++) {
+    picks.push(candidates[i]);
+  }
+
+  // Insert bidirectional similarities
+  if (picks.length > 0) {
+    const similarities = [];
+    for (const pick of picks) {
+      similarities.push(
+        { id: `${songId}-${pick.id}`, song_id: songId, similar_song_id: pick.id },
+        { id: `${pick.id}-${songId}`, song_id: pick.id, similar_song_id: songId }
+      );
+    }
+
+    await supabase
+      .from('song_similarities')
+      .upsert(similarities, { onConflict: 'id' });
+    
+    console.log(`Generated ${picks.length} similarities for song ${songId}`);
+  }
+}
+
 export async function upsertSongsToDb(curatedWithSpotify: any[]) {
   const results = { added: 0, updated: 0, errors: 0, skipped: 0 };
   const processedSongIds: string[] = [];
@@ -63,13 +118,18 @@ export async function upsertSongsToDb(curatedWithSpotify: any[]) {
       const { error: insertError } = await supabase
         .from('songs')
         .insert({ ...dbSong, id: songId });
-      if (!insertError) results.added++;
-      else results.errors++;
+      if (!insertError) {
+        results.added++;
+        // Generate similarities for newly added song
+        await generateSimilaritiesForSong(songId, dbSong.category, dbSong.language);
+      } else {
+        results.errors++;
+      }
     }
     processedSongIds.push(songId);
   }
 
-  // Create song_similarities relationships (as before)
+  // For batch inserts, also create similarities between songs in the same batch
   if (processedSongIds.length > 1) {
     const similarities: any[] = [];
     for (let i = 0; i < processedSongIds.length; i++) {
