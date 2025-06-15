@@ -29,6 +29,7 @@ export function useRecommendations({
         maxSongs
       );
       setRecommendations(songs);
+      if (!songs.length) setError("No recommendations found. Try adjusting your mood or language.");
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Failed to get recommendations"

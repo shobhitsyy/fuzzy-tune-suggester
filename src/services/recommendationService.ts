@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface MoodParams {
@@ -20,37 +19,25 @@ export interface SongRecommendation {
 }
 
 function getRobustMoodCategories(moodParams: MoodParams): string[] {
-  const cat = [];
+  const categories = [];
 
   // Energy mapping (1-10)
-  if (moodParams.energy <= 3) {
-    cat.push('calm', 'relaxed', 'mellow');
-  } else if (moodParams.energy <= 7) {
-    cat.push('moderate', 'chill');
-  } else {
-    cat.push('energetic', 'upbeat', 'fun');
-  }
+  if (moodParams.energy <= 3) categories.push('calm', 'relaxed', 'mellow');
+  else if (moodParams.energy <= 7) categories.push('moderate', 'chill');
+  else categories.push('energetic', 'upbeat', 'fun');
 
   // Mood mapping (1-10)
-  if (moodParams.mood <= 3) {
-    cat.push('calm', 'relaxed', 'sad', 'emotional');
-  } else if (moodParams.mood <= 7) {
-    cat.push('moderate', 'mellow', 'classic');
-  } else {
-    cat.push('upbeat', 'energetic', 'happy', 'fun');
-  }
+  if (moodParams.mood <= 3) categories.push('calm', 'relaxed', 'sad', 'emotional');
+  else if (moodParams.mood <= 7) categories.push('moderate', 'mellow', 'classic');
+  else categories.push('upbeat', 'energetic', 'happy', 'fun');
 
   // Focus mapping (1-10)
-  if (moodParams.focus <= 3) {
-    cat.push('calm', 'relaxed', 'chill', 'mellow');
-  } else if (moodParams.focus <= 7) {
-    cat.push('moderate', 'classic');
-  } else {
-    cat.push('energetic', 'upbeat', 'epic', 'motivational');
-  }
+  if (moodParams.focus <= 3) categories.push('calm', 'relaxed', 'chill', 'mellow');
+  else if (moodParams.focus <= 7) categories.push('moderate', 'classic');
+  else categories.push('energetic', 'upbeat', 'epic', 'motivational');
 
   // Deduplicate, lowercase to avoid DB mismatch, and slice to top 7 for variety
-  return [...new Set(cat.map(x => x.toLowerCase()))].slice(0, 7);
+  return [...new Set(categories.map(x => x.toLowerCase()))].slice(0, 7);
 }
 
 export class RecommendationService {
@@ -66,7 +53,7 @@ export class RecommendationService {
     if (includeHindi) languageFilter.push('Hindi');
     if (languageFilter.length === 0) throw new Error('No language selected');
 
-    // First, find best matches by BOTH language and mood categories
+    // Try match by BOTH language and mood categories
     let { data: songs, error } = await supabase
       .from('songs')
       .select('id,title,artist,category,language,cover_image,album,duration,release_date')
@@ -76,7 +63,7 @@ export class RecommendationService {
 
     if (error) throw error;
 
-    // Not enough? Fill up with other songs in the selected languages, not just the same IDs
+    // If not enough songs, fill up with any other songs from selected languages
     if (songs && songs.length < maxSongs) {
       const gotIds = (songs || []).map(s => s.id);
       const { data: fallbackSongs } = await supabase
@@ -89,20 +76,24 @@ export class RecommendationService {
       songs = songs.concat(fallbackSongs || []);
     }
 
-    // Even fewer? Just take random from the selected language if still less than maxSongs
+    // If still not enough, fill with completely random songs (last ditch)
     if (songs && songs.length < maxSongs) {
       const gotIds = (songs || []).map(s => s.id);
-      const { data: moreFallback } = await supabase
+      const { data: extraFallback } = await supabase
         .from('songs')
         .select('id,title,artist,category,language,cover_image,album,duration,release_date')
-        .in('language', languageFilter)
         .not('id', 'in', gotIds)
         .order('RANDOM()')
         .limit(maxSongs - (songs?.length || 0));
-      songs = songs.concat(moreFallback || []);
+      songs = songs.concat(extraFallback || []);
     }
 
-    return (songs as SongRecommendation[]) || [];
+    // Final deduplication
+    const unique: { [id: string]: SongRecommendation } = {};
+    (songs || []).forEach((song: any) => {
+      unique[song.id] = song as SongRecommendation;
+    });
+    return Object.values(unique).slice(0, maxSongs);
   }
 
   static async getSimilarSongs(
