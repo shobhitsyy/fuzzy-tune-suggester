@@ -3,22 +3,7 @@ import { spotifyService } from './spotifyService';
 import { supabase } from '@/integrations/supabase/client';
 import { SongCategoryType } from '@/utils/fuzzyLogic';
 
-interface SpotifyTrack {
-  id: string;
-  name: string;
-  artists: Array<{ name: string }>;
-  album: {
-    name: string;
-    release_date: string;
-    images: Array<{ url: string }>;
-  };
-  external_urls: {
-    spotify: string;
-  };
-  duration_ms: number;
-}
-
-// Curated songs for DB bootstrap—English and Hindi sets
+// Add 5 English and 5 Hindi curated songs, looking up Spotify for URLs and images
 const curatedSongs = {
   english: [
     { name: 'Blinding Lights', artist: 'The Weeknd', category: 'energetic' as SongCategoryType },
@@ -45,7 +30,7 @@ export const addCuratedSongsToDatabase = async () => {
   const results = { added: 0, errors: 0, skipped: 0 };
   const addedSongIds: string[] = [];
 
-  // Merge the english and hindi song arrays with their languages
+  // Compose merged song list with language property
   const allSongs = [
     ...curatedSongs.english.map(song => ({ ...song, language: 'English' })),
     ...curatedSongs.hindi.map(song => ({ ...song, language: 'Hindi' }))
@@ -53,7 +38,7 @@ export const addCuratedSongsToDatabase = async () => {
 
   for (const song of allSongs) {
     try {
-      // Check if song already exists
+      // Check if song already exists in Supabase by name+artist
       const { data: existingSong } = await supabase
         .from('songs')
         .select('id')
@@ -66,13 +51,8 @@ export const addCuratedSongsToDatabase = async () => {
         continue;
       }
 
-      // Query Spotify for the actual song (by name and artist)
-      const searchResults = await spotifyService.searchTracks(`${song.name} ${song.artist}`);
-      // Spotify API structure: searchResults.tracks.items[0]
-      let spotifyTrack: SpotifyTrack | undefined = undefined;
-      if (searchResults && searchResults.tracks && Array.isArray(searchResults.tracks.items)) {
-        spotifyTrack = searchResults.tracks.items[0];
-      }
+      // Find track on Spotify for accurate URLs/metadata
+      const spotifyTrack = await spotifyService.searchSpecificTrack(song.name, song.artist);
 
       if (!spotifyTrack) {
         results.errors++;
@@ -81,13 +61,12 @@ export const addCuratedSongsToDatabase = async () => {
 
       const songId = `song_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const categories = [song.category];
-
-      const durationMs = spotifyTrack.duration_ms;
+      const durationMs = spotifyTrack.duration_ms || 0;
       const minutes = Math.floor(durationMs / 60000);
       const seconds = Math.floor((durationMs % 60000) / 1000);
       const duration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
-      // Insert into 'songs'
+      // Insert new song with full metadata
       const { error: insertError } = await supabase
         .from('songs')
         .insert({
@@ -97,9 +76,9 @@ export const addCuratedSongsToDatabase = async () => {
           album: spotifyTrack.album?.name || 'Unknown Album',
           release_date: spotifyTrack.album?.release_date || '2023-01-01',
           language: song.language,
-          category: categories[0],
-          cover_image: spotifyTrack.album?.images?.[0]?.url || '/placeholder.svg',
-          duration: duration,
+          category: song.category,
+          cover_image: (spotifyTrack.album?.images?.[0]?.url) || '/placeholder.svg',
+          duration,
           spotify_url: spotifyTrack.external_urls?.spotify,
           tags: categories,
           description: `${song.name} by ${song.artist}`
@@ -116,7 +95,7 @@ export const addCuratedSongsToDatabase = async () => {
     }
   }
 
-  // After adding, create similarities between the curated set (pairwise)
+  // Create pairwise similarities only for new ingested songs
   if (addedSongIds.length > 1) {
     const similarities: Array<{ id: string; song_id: string; similar_song_id: string }> = [];
     for (let i = 0; i < addedSongIds.length; i++) {
@@ -144,4 +123,3 @@ export const addCuratedSongsToDatabase = async () => {
 export const spotifyDatabaseService = {
   addCuratedSongsToDatabase,
 };
-
