@@ -36,7 +36,6 @@ const curatedSongs = {
   ]
 };
 
-// This ensures we only bootstrap once per session
 let hasPopulated = false;
 
 export const addCuratedSongsToDatabase = async () => {
@@ -69,10 +68,11 @@ export const addCuratedSongsToDatabase = async () => {
 
       // Query Spotify for the actual song (by name and artist)
       const searchResults = await spotifyService.searchTracks(`${song.name} ${song.artist}`);
-      // Many Spotify wrappers return searchResults.items array
-      const spotifyTrack: SpotifyTrack | undefined = Array.isArray(searchResults.items)
-        ? searchResults.items[0]
-        : searchResults.tracks?.items?.[0] ?? searchResults.items?.[0];
+      // Spotify API structure: searchResults.tracks.items[0]
+      let spotifyTrack: SpotifyTrack | undefined = undefined;
+      if (searchResults && searchResults.tracks && Array.isArray(searchResults.tracks.items)) {
+        spotifyTrack = searchResults.tracks.items[0];
+      }
 
       if (!spotifyTrack) {
         results.errors++;
@@ -142,5 +142,6 @@ export const addCuratedSongsToDatabase = async () => {
 };
 
 export const spotifyDatabaseService = {
-  addCuratedSongsToDatabase
+  addCuratedSongsToDatabase,
 };
+
