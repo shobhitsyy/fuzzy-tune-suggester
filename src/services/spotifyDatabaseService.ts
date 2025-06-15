@@ -159,7 +159,7 @@ const discoverSongsForCategory = async (category: SongCategoryType, limit: numbe
               title: track.name,
               artist: track.artists?.[0]?.name || 'Unknown Artist',
               album: track.album?.name || 'Unknown Album',
-              release_date: track.album?.release_date || '2023-01-01',
+              release_date: '2023-01-01', // Default date since Spotify API might not provide this
               language: 'English', // Default for Spotify tracks
               category: categories[0],
               cover_image: track.album?.images?.[0]?.url || '/placeholder.svg',
