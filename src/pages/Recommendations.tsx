@@ -35,7 +35,7 @@ const Recommendations = () => {
         const songs = await getRecommendedSongs(
           category,
           memberships,
-          12, // Get more songs for the dedicated page
+          40, // Increased: Allow up to 40 recommendations
           includeEnglish,
           includeHindi
         );

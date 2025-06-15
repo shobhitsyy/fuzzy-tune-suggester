@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -206,7 +205,7 @@ const Index = () => {
         </Card>
 
         {/* Render the seeding component temporarily */}
-        <SeedSongs />
+        {/* <SeedSongs /> */}
 
         {/* Footer */}
         <div className="mt-12 text-center space-y-2 opacity-70">
