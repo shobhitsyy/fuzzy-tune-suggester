@@ -1,10 +1,12 @@
-
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Song } from "@/utils/fuzzyLogic";
 import { Star, Share, ListPlus } from "lucide-react";
+import { addSongToDefaultPlaylist } from "@/services/playlistService";
+import { useToast } from "@/hooks/use-toast";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface SongCardProps {
   song: Song;
@@ -15,19 +17,15 @@ const SongCard: React.FC<SongCardProps> = ({ song, onClick }) => {
   const [rating, setRating] = useState(0);
   const [shared, setShared] = useState(false);
   const [addedToPlaylist, setAddedToPlaylist] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const { toast } = useToast();
+  const user = useCurrentUser();
 
   const openSpotify = (event: React.MouseEvent) => {
     event.stopPropagation();
     if (song.spotifyUrl) {
       window.open(song.spotifyUrl, '_blank');
     }
-  };
-
-  // For demo: Add to playlist simply marks state
-  const handleAddToPlaylist = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    setAddedToPlaylist(true);
-    setTimeout(() => setAddedToPlaylist(false), 1400);
   };
 
   // For demo: Share via navigator.share or clipboard
@@ -56,6 +54,32 @@ const SongCard: React.FC<SongCardProps> = ({ song, onClick }) => {
   const handleRating = (star: number, event: React.MouseEvent) => {
     event.stopPropagation();
     setRating(star);
+  };
+
+  const handleAddToPlaylist = async (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!user) {
+      toast({ title: "Please log in to add to your playlist." });
+      return;
+    }
+    setAdding(true);
+    try {
+      await addSongToDefaultPlaylist(user.id, song.id);
+      setAddedToPlaylist(true);
+      toast({
+        title: "Added to Playlist",
+        description: `'${song.title}' was added to your playlist.`,
+      });
+      setTimeout(() => setAddedToPlaylist(false), 1400);
+    } catch (err: any) {
+      toast({
+        title: "Error adding song",
+        description: err.message ?? "Could not add song to playlist.",
+        variant: "destructive",
+      });
+    } finally {
+      setAdding(false);
+    }
   };
 
   return (
@@ -140,14 +164,17 @@ const SongCard: React.FC<SongCardProps> = ({ song, onClick }) => {
             <Share className="h-5 w-5" />
           </Button>
           {/* Add to Playlist */}
-          <Button
-            size="icon"
-            variant="ghost"
-            className={`rounded-full transition-colors ${addedToPlaylist ? 'bg-green-100 text-green-600' : 'hover:bg-green-50'}`}
-            onClick={handleAddToPlaylist}
-          >
-            <ListPlus className="h-5 w-5" />
-          </Button>
+          {user && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className={`rounded-full transition-colors ${addedToPlaylist ? 'bg-green-100 text-green-600' : 'hover:bg-green-50'}`}
+              onClick={handleAddToPlaylist}
+              disabled={adding}
+            >
+              <ListPlus className="h-5 w-5" />
+            </Button>
+          )}
         </div>
 
         {/* Tags */}
