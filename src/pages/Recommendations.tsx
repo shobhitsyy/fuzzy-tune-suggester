@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import SongDetail from '@/components/SongDetail';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { MoodParams, determineSongCategory, Song } from '@/utils/fuzzyLogic';
@@ -143,7 +142,7 @@ const Recommendations = () => {
           <>
             <RecommendationGrid
               recommendedSongs={recommendedSongs.slice(0, shownCount)}
-              onSongSelect={handleSongSelect}
+              onSongSelect={() => {}}
             />
             <div className="text-center mt-8">
               <p className="text-gray-600">
@@ -163,14 +162,7 @@ const Recommendations = () => {
             onBack={handleBackToHome}
           />
         )}
-        {selectedSong && (
-          <SongDetail
-            song={selectedSong}
-            isOpen={!!selectedSong}
-            onClose={() => setSelectedSong(null)}
-            onSelectSimilar={handleSongSelect}
-          />
-        )}
+        {/* Remove SongDetail: expanded UI is now within SongCard */}
       </div>
     </div>
   );

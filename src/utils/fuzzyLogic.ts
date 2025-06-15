@@ -1,4 +1,3 @@
-
 // Types for our fuzzy input parameters
 export interface MoodParams {
   heartRate: number; // 0-100 (beats per minute normalized)
@@ -131,38 +130,49 @@ const energeticMembership = (params: MoodParams): number => {
   return (heartRateFactor * 0.3 + activityFactor * 0.3 + moodFactor * 0.4);
 };
 
-// Determine the recommended song category based on fuzzy logic
+// Improved determineSongCategory: Give better category variety.
 export const determineSongCategory = (params: MoodParams): { 
   category: SongCategoryType, 
   memberships: Record<SongCategoryType, number> 
 } => {
-  // Apply time of day factor as a modifier
-  const timeFactor = timeOfDayFactor(params.timeOfDay);
-  
-  // Calculate memberships for each category
-  const memberships: Record<SongCategoryType, number> = {
-    calm: calmMembership(params) * (params.timeOfDay >= 20 || params.timeOfDay <= 7 ? 1.2 : 1),
-    relaxed: relaxedMembership(params),
-    moderate: moderateMembership(params),
-    upbeat: upbeatMembership(params) * (params.timeOfDay >= 8 && params.timeOfDay <= 20 ? 1.2 : 1),
-    energetic: energeticMembership(params) * (params.timeOfDay >= 10 && params.timeOfDay <= 18 ? 1.2 : 1)
+  // Use energy, mood, focus more aggressively
+  const energy = ((params.heartRate - 60) / 5 + params.activity) / 3.5; // 0-10 scale
+  const happy = params.mood;
+  const focus = params.activity;
+
+  const calc = {
+    calm: 10 - energy - happy,
+    relaxed: 5 - Math.abs(energy - 5) - Math.abs(happy - 5),
+    moderate: (energy + happy) / 2,
+    upbeat: energy + happy - focus / 2,
+    energetic: 2 * energy + happy
   };
-  
-  // Find category with highest membership
-  let maxCategory: SongCategoryType = 'moderate';
-  let maxValue = 0;
-  
-  Object.entries(memberships).forEach(([category, value]) => {
-    if (value > maxValue) {
-      maxValue = value;
-      maxCategory = category as SongCategoryType;
-    }
+
+  // Clamp to 0
+  Object.keys(calc).forEach(key => {
+    // @ts-ignore
+    calc[key] = Math.max(0, Number(calc[key]));
   });
   
-  return {
-    category: maxCategory,
-    memberships
+  const memberships: Record<SongCategoryType, number> = {
+    calm: Number(calc.calm),
+    relaxed: Number(calc.relaxed),
+    moderate: Number(calc.moderate),
+    upbeat: Number(calc.upbeat),
+    energetic: Number(calc.energetic)
   };
+  
+  let maxCategory: SongCategoryType = 'moderate';
+  let maxValue = -1;
+
+  Object.entries(memberships).forEach(([cat, val]) => {
+    if (val > maxValue) {
+      maxCategory = cat as SongCategoryType;
+      maxValue = val;
+    }
+  });
+
+  return { category: maxCategory, memberships };
 };
 
 // Function to get recommendations with weightings
