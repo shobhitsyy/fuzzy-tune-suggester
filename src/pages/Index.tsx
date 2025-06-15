@@ -1,175 +1,125 @@
-import { useState, useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import EnhancedMoodSelector from '@/components/EnhancedMoodSelector';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Heart, Activity, Music, Info } from 'lucide-react';
+import { calculateMembership, SongCategory, Song } from '@/utils/fuzzyLogic';
 import SongCard from '@/components/SongCard';
-import SongDetail from '@/components/SongDetail';
+import SongDetailsDialog from '@/components/SongDetailsDialog';
+import { useToast } from '@/hooks/use-toast';
+import { getRecommendedSongs, isDatabasePopulated, populateDatabase } from '@/services/songService';
 import SpotifyIntegration from '@/components/SpotifyIntegration';
 import SpotifyFeatures from '@/components/SpotifyFeatures';
-import { Song, MoodParams, determineSongCategory } from '@/utils/fuzzyLogic';
-import { populateDatabase, isDatabasePopulated, getRecommendedSongs } from '@/services/songService';
-import { spotifyService } from '@/services/spotifyService';
-import { Music, Sparkles, Heart } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-
-interface UserPreferencesType {
-  defaultLanguage: 'English' | 'Hindi' | 'both';
-  recommendationCount: number;
-  favoriteGenres: string[];
-  excludedGenres: string[];
-  discoveryMode: 'balanced' | 'adventurous' | 'safe';
-  spotifyRedirect: boolean;
-  sensitivity: number;
-  privateMode?: boolean;
-}
+import SpotifyDatabaseManager from '@/components/SpotifyDatabaseManager';
 
 const Index = () => {
-  const [currentMood, setCurrentMood] = useState<MoodParams>({
-    heartRate: 70,
-    timeOfDay: 12,
-    activity: 5,
-    mood: 5
-  });
-  
+  const [heartRate, setHeartRate] = useState<number>(70);
+  const [activity, setActivity] = useState<number>(5);
+  const [mood, setMood] = useState<number>(5);
+  const [includeEnglish, setIncludeEnglish] = useState<boolean>(true);
+  const [includeHindi, setIncludeHindi] = useState<boolean>(true);
   const [recommendedSongs, setRecommendedSongs] = useState<Song[]>([]);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [dbInitialized, setDbInitialized] = useState(false);
-  const [includeEnglish, setIncludeEnglish] = useState(true);
-  const [includeHindi, setIncludeHindi] = useState(true);
-  const [activeTab, setActiveTab] = useState('discover');
-  const [preferences, setPreferences] = useState<UserPreferencesType>({
-    defaultLanguage: 'both' as 'English' | 'Hindi' | 'both',
-    recommendationCount: 25,
-    favoriteGenres: [] as string[],
-    excludedGenres: [] as string[],
-    discoveryMode: 'balanced' as 'balanced' | 'adventurous' | 'safe',
-    spotifyRedirect: true,
-    sensitivity: 5,
-    privateMode: false
-  });
-  
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isDbInitialized, setIsDbInitialized] = useState<boolean>(false);
+  const [isDbLoading, setIsDbLoading] = useState<boolean>(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    initializeDatabase();
-    loadPreferences();
+    const checkDatabase = async () => {
+      try {
+        const isPopulated = await isDatabasePopulated();
+        setIsDbInitialized(isPopulated);
+        setIsDbLoading(false);
+      } catch (error) {
+        console.error('Error checking database:', error);
+        setIsDbLoading(false);
+      }
+    };
+
+    checkDatabase();
   }, []);
 
-  const loadPreferences = () => {
-    const saved = localStorage.getItem('musicPreferences');
-    if (saved) {
-      const parsedPrefs = JSON.parse(saved);
-      setPreferences(parsedPrefs);
-      
-      // Update language preferences
-      if (parsedPrefs.defaultLanguage === 'English') {
-        setIncludeEnglish(true);
-        setIncludeHindi(false);
-      } else if (parsedPrefs.defaultLanguage === 'Hindi') {
-        setIncludeEnglish(false);
-        setIncludeHindi(true);
-      } else {
-        setIncludeEnglish(true);
-        setIncludeHindi(true);
-      }
-    }
-  };
-
-  const initializeDatabase = async () => {
+  const handleInitializeDatabase = async () => {
+    setIsDbLoading(true);
     try {
-      console.log('Checking database initialization...');
-      const isPopulated = await isDatabasePopulated();
-      
-      if (!isPopulated) {
-        console.log('Database not populated, initializing...');
-        await populateDatabase();
-        toast({
-          title: "Database Initialized",
-          description: "Song database has been set up successfully!",
-        });
-      }
-      
-      setDbInitialized(true);
+      await populateDatabase();
+      setIsDbInitialized(true);
+      toast({
+        title: "Database Initialized",
+        description: "Song database has been successfully populated.",
+      });
     } catch (error) {
-      console.error('Failed to initialize database:', error);
+      console.error('Error initializing database:', error);
       toast({
         title: "Database Error",
         description: "Failed to initialize the song database. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsDbLoading(false);
     }
   };
 
-  // Calculate dynamic recommendation count based on mood and available songs
-  const getDynamicRecommendationCount = (category: any, memberships: any) => {
-    const baseCount = 20; // Minimum count
-    const maxCount = 50; // Maximum count
-    
-    // Calculate based on mood intensity - higher energy/valence = more songs
-    const moodIntensity = (currentMood.activity + currentMood.mood) / 10;
-    const dynamicCount = Math.round(baseCount + (moodIntensity * 15));
-    
-    return Math.min(Math.max(dynamicCount, baseCount), maxCount);
-  };
-
-  const handleGetRecommendations = async () => {
-    if (!dbInitialized) {
+  const handleGenerateRecommendations = async () => {
+    if (!includeEnglish && !includeHindi) {
       toast({
-        title: "Database Not Ready",
-        description: "Please wait for the database to initialize.",
+        title: "Language Selection Required",
+        description: "Please select at least one language for recommendations.",
         variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
-    
+    setRecommendedSongs([]);
+
     try {
-      const { category, memberships } = determineSongCategory(currentMood);
-      const dynamicCount = getDynamicRecommendationCount(category, memberships);
+      // Calculate fuzzy memberships based on user inputs
+      const memberships = calculateMembership(heartRate, activity, mood);
       
-      console.log('Getting recommendations for category:', category, 'with memberships:', memberships);
-      console.log('Dynamic recommendation count:', dynamicCount);
+      // Find the primary category (highest membership value)
+      let primaryCategory: SongCategory = 'happy';
+      let maxMembership = 0;
       
+      Object.entries(memberships).forEach(([category, value]) => {
+        if (value > maxMembership) {
+          maxMembership = value;
+          primaryCategory = category as SongCategory;
+        }
+      });
+
+      // Get recommended songs
       const songs = await getRecommendedSongs(
-        category, 
-        memberships, 
-        dynamicCount,
+        primaryCategory,
+        memberships,
+        20,
         includeEnglish,
         includeHindi
       );
-      
-      console.log('Received recommended songs:', songs.length);
+
       setRecommendedSongs(songs);
-      
-      // Save to listening history if not in private mode
-      if (!preferences.privateMode) {
-        const history = JSON.parse(localStorage.getItem('listeningHistory') || '[]');
-        const newHistory = [...songs.slice(0, 5), ...history].slice(0, 100); // Keep last 100
-        localStorage.setItem('listeningHistory', JSON.stringify(newHistory));
-      }
       
       if (songs.length === 0) {
         toast({
-          title: "No Recommendations Found",
-          description: "Try adjusting your mood settings or language preferences.",
+          title: "No Songs Found",
+          description: "Try adjusting your mood parameters or language preferences.",
           variant: "destructive",
         });
       } else {
-        // Automatically switch to recommendations tab
-        setActiveTab('recommendations');
         toast({
-          title: "Recommendations Ready!",
-          description: `Found ${songs.length} songs matching your mood. Check them out on Spotify!`,
+          title: "Recommendations Ready",
+          description: `Found ${songs.length} songs matching your mood.`,
         });
       }
     } catch (error) {
-      console.error('Error getting recommendations:', error);
+      console.error('Error generating recommendations:', error);
       toast({
-        title: "Error",
-        description: "Failed to get song recommendations. Please try again.",
+        title: "Recommendation Error",
+        description: "Failed to generate song recommendations. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -177,202 +127,255 @@ const Index = () => {
     }
   };
 
-  const handleSongFeedback = (songId: string, rating: 'like' | 'dislike' | 'love', feedback?: string) => {
-    console.log('Song feedback:', { songId, rating, feedback });
-    
-    // Update user preferences based on feedback
-    const song = recommendedSongs.find(s => s.id === songId);
-    if (song && rating === 'love') {
-      const favorites = JSON.parse(localStorage.getItem('favoriteSongs') || '[]');
-      const updatedFavorites = [...favorites, song].slice(0, 50); // Keep last 50
-      localStorage.setItem('favoriteSongs', JSON.stringify(updatedFavorites));
-    }
-  };
-
-  const handleLanguageChange = (english: boolean, hindi: boolean) => {
-    setIncludeEnglish(english);
-    setIncludeHindi(hindi);
-    
-    // Update preferences
-    const newLanguage = english && hindi ? 'both' : english ? 'English' : 'Hindi';
-    const updatedPrefs = { ...preferences, defaultLanguage: newLanguage as 'English' | 'Hindi' | 'both' };
-    setPreferences(updatedPrefs);
-    localStorage.setItem('musicPreferences', JSON.stringify(updatedPrefs));
-  };
-
-  const handleTabClick = (tabValue: string) => {
-    setActiveTab(tabValue);
-  };
-
-  const handleSongSelect = (song: Song) => {
+  const handleSongClick = (song: Song) => {
     setSelectedSong(song);
   };
 
-  const getDynamicSongCount = () => {
-    if (recommendedSongs.length === 0) return "20+ songs";
-    return `${recommendedSongs.length} songs`;
-  };
-
-  const handleSpotifyAuthSuccess = () => {
-    toast({
-      title: "Spotify Connected!",
-      description: "You can now enjoy enhanced music features with your Spotify account.",
-    });
+  const handleCloseDialog = () => {
+    setSelectedSong(null);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-6xl">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
+      <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-gray-800 mb-2 sm:mb-4">
-            Music Mood Generator
-          </h1>
-          <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-2xl mx-auto px-2">
-            Discover personalized music recommendations based on your current mood and activity.
-          </p>
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Music Mood Generator</h1>
+          <p className="text-gray-600">Discover songs that match your current mood and activity level</p>
         </div>
 
         {/* Spotify Integration */}
-        <div className="mb-6">
-          <SpotifyIntegration onAuthSuccess={handleSpotifyAuthSuccess} />
+        <div className="mb-8">
+          <SpotifyIntegration onAuthSuccess={() => {
+            console.log('Spotify authenticated successfully');
+          }} />
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6 bg-white shadow-sm rounded-xl h-12 sm:h-14">
-            <TabsTrigger 
-              value="discover" 
-              className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-4 rounded-lg data-[state=active]:bg-blue-500 data-[state=active]:text-white"
-            >
-              <Music className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span>Discover</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="recommendations" 
-              className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm md:text-base py-2 sm:py-3 px-2 sm:px-4 rounded-lg data-[state=active]:bg-blue-500 data-[state=active]:text-white"
-            >
-              <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Your Music</span>
-              <span className="sm:hidden">Music</span>
-            </TabsTrigger>
-          </TabsList>
+        {/* Spotify Database Management */}
+        <div className="mb-8">
+          <SpotifyDatabaseManager />
+        </div>
 
-          <TabsContent value="discover" className="space-y-4 sm:space-y-6">
-            <Card className="bg-white shadow-lg rounded-2xl border-0">
-              <CardHeader className="text-center pb-3 sm:pb-4">
-                <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 flex items-center justify-center gap-2">
-                  <Heart className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-red-500" />
-                  <span>How are you feeling today?</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-3 sm:px-4 md:px-6 pb-6 sm:pb-8">
-                <EnhancedMoodSelector
-                  moodParams={currentMood}
-                  onMoodChange={setCurrentMood}
-                  includeEnglish={includeEnglish}
-                  includeHindi={includeHindi}
-                  onLanguageChange={handleLanguageChange}
+        {/* User Preferences */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Heart Rate */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-rose-800">
+                <Heart className="h-5 w-5 text-rose-600" />
+                Heart Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">BPM</span>
+                  <span className="text-2xl font-bold text-rose-600">{heartRate}</span>
+                </div>
+                <Slider
+                  value={[heartRate]}
+                  min={50}
+                  max={180}
+                  step={1}
+                  onValueChange={(value) => setHeartRate(value[0])}
+                  className="py-4"
                 />
-                <div className="text-center mt-6 sm:mt-8">
-                  <Button
-                    onClick={handleGetRecommendations}
-                    disabled={isLoading || !dbInitialized}
-                    size="lg"
-                    className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 sm:px-8 py-3 sm:py-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 w-full sm:w-auto text-sm sm:text-base min-h-[48px] sm:min-h-[56px]"
-                  >
-                    {isLoading ? (
-                      <div className="flex items-center justify-center gap-2 sm:gap-3">
-                        <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white"></div>
-                        <span className="text-xs sm:text-sm">Finding Perfect Songs...</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center gap-2 sm:gap-3">
-                        <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span className="text-xs sm:text-sm">Generate Music Recommendations</span>
-                      </div>
-                    )}
-                  </Button>
-                  {!dbInitialized && (
-                    <p className="text-xs sm:text-sm text-gray-500 mt-2 sm:mt-3">
-                      Initializing song database...
-                    </p>
-                  )}
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Resting (50)</span>
+                  <span>Moderate (110)</span>
+                  <span>Intense (180)</span>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="recommendations" className="space-y-4 sm:space-y-6">
-            {/* Spotify Features - only show if authenticated and has recommendations */}
-            {spotifyService.isAuthenticated() && recommendedSongs.length > 0 && (
-              <SpotifyFeatures 
-                recommendedSongs={recommendedSongs} 
-                currentMood={currentMood}
-              />
-            )}
-
-            <Card className="bg-white shadow-lg rounded-2xl border-0">
-              <CardHeader className="pb-3 sm:pb-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <CardTitle className="flex items-center gap-2 text-gray-800 text-base sm:text-lg md:text-xl">
-                    <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
-                    <span>Your Music Recommendations</span>
-                    {recommendedSongs.length > 0 && (
-                      <span className="text-xs sm:text-sm text-gray-500">
-                        ({recommendedSongs.length} songs)
-                      </span>
-                    )}
-                  </CardTitle>
-                  <Button
-                    onClick={() => setActiveTab('discover')}
-                    variant="outline"
-                    size="sm"
-                    className="text-blue-600 border-blue-600 hover:bg-blue-50 w-full sm:w-auto text-xs sm:text-sm"
-                  >
-                    Adjust Mood
-                  </Button>
+          {/* Activity Level */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-blue-800">
+                <Activity className="h-5 w-5 text-blue-600" />
+                Activity Level
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Level</span>
+                  <span className="text-2xl font-bold text-blue-600">{activity}/10</span>
                 </div>
-              </CardHeader>
-              <CardContent className="px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">
-                {recommendedSongs.length === 0 ? (
-                  <div className="text-center py-8 sm:py-12">
-                    <Music className="h-12 w-12 sm:h-16 sm:w-16 mx-auto text-gray-300 mb-3 sm:mb-4" />
-                    <h3 className="text-base sm:text-lg md:text-xl font-medium text-gray-600 mb-2">
-                      No recommendations yet
-                    </h3>
-                    <p className="text-gray-500 mb-4 sm:mb-6 text-xs sm:text-sm md:text-base px-2">
-                      Set your mood and get personalized song recommendations that you can play on Spotify
-                    </p>
-                    <Button
-                      onClick={() => setActiveTab('discover')}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base"
-                    >
-                      Start Discovering Music
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
-                    {recommendedSongs.map((song) => (
-                      <SongCard
-                        key={song.id}
-                        song={song}
-                        onClick={handleSongSelect}
-                      />
+                <Slider
+                  value={[activity]}
+                  min={1}
+                  max={10}
+                  step={1}
+                  onValueChange={(value) => setActivity(value[0])}
+                  className="py-4"
+                />
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Relaxed (1)</span>
+                  <span>Moderate (5)</span>
+                  <span>Energetic (10)</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Mood */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-amber-800">
+                <Music className="h-5 w-5 text-amber-600" />
+                Current Mood
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Mood</span>
+                  <span className="text-2xl font-bold text-amber-600">{mood}/10</span>
+                </div>
+                <Slider
+                  value={[mood]}
+                  min={1}
+                  max={10}
+                  step={1}
+                  onValueChange={(value) => setMood(value[0])}
+                  className="py-4"
+                />
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Sad (1)</span>
+                  <span>Neutral (5)</span>
+                  <span>Happy (10)</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Language Preferences */}
+        <Card className="mb-8">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-gray-800">Language Preferences</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="english"
+                  checked={includeEnglish}
+                  onCheckedChange={setIncludeEnglish}
+                />
+                <Label htmlFor="english">English Songs</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="hindi"
+                  checked={includeHindi}
+                  onCheckedChange={setIncludeHindi}
+                />
+                <Label htmlFor="hindi">Hindi Songs</Label>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Generate Button */}
+        <div className="flex justify-center mb-8">
+          {!isDbInitialized && !isDbLoading ? (
+            <Button 
+              onClick={handleInitializeDatabase} 
+              disabled={isDbLoading}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-6 text-lg rounded-xl"
+            >
+              {isDbLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <span>Initializing Database...</span>
+                </div>
+              ) : (
+                <span>Initialize Song Database</span>
+              )}
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleGenerateRecommendations} 
+              disabled={isLoading || isDbLoading || (!includeEnglish && !includeHindi)}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-6 text-lg rounded-xl"
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <span>Generating...</span>
+                </div>
+              ) : (
+                <span>Generate Music Recommendations</span>
+              )}
+            </Button>
+          )}
+        </div>
+
+        {/* Spotify Features */}
+        {recommendedSongs.length > 0 && (
+          <div className="mb-8">
+            <SpotifyFeatures 
+              recommendedSongs={recommendedSongs}
+              currentMood={{ heartRate, activity, mood }}
+            />
+          </div>
+        )}
+
+        {/* Results */}
+        {recommendedSongs.length > 0 && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-800">Your Recommendations</h2>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Info className="h-4 w-4" />
+                <span>Click on a song to see details</span>
+              </div>
+            </div>
+
+            <Tabs defaultValue="all" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="all">All Songs</TabsTrigger>
+                <TabsTrigger value="english">English</TabsTrigger>
+                <TabsTrigger value="hindi">Hindi</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="all">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {recommendedSongs.map((song) => (
+                    <SongCard key={song.id} song={song} onClick={handleSongClick} />
+                  ))}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="english">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {recommendedSongs
+                    .filter((song) => song.language === 'English')
+                    .map((song) => (
+                      <SongCard key={song.id} song={song} onClick={handleSongClick} />
                     ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="hindi">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {recommendedSongs
+                    .filter((song) => song.language === 'Hindi')
+                    .map((song) => (
+                      <SongCard key={song.id} song={song} onClick={handleSongClick} />
+                    ))}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        )}
 
+        {/* Song Details Dialog */}
         {selectedSong && (
-          <SongDetail
-            song={selectedSong}
-            isOpen={!!selectedSong}
-            onClose={() => setSelectedSong(null)}
-            onSelectSimilar={handleSongSelect}
-          />
+          <SongDetailsDialog song={selectedSong} open={!!selectedSong} onClose={handleCloseDialog} />
         )}
       </div>
     </div>
