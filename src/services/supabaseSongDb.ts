@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { getSongDbDataFromSpotifyTrack } from '@/utils/curatedSongHelpers';
 
@@ -69,25 +68,7 @@ export async function upsertSongsToDb(curatedWithSpotify: any[]) {
     processedSongIds.push(songId);
   }
 
-  // Create song_similarities relationships (as before)
-  if (processedSongIds.length > 1) {
-    const similarities: any[] = [];
-    for (let i = 0; i < processedSongIds.length; i++) {
-      for (let j = i + 1; j < processedSongIds.length; j++) {
-        const songId1 = processedSongIds[i], songId2 = processedSongIds[j];
-        similarities.push({
-          id: `${songId1}-${songId2}`,
-          song_id: songId1,
-          similar_song_id: songId2
-        }, {
-          id: `${songId2}-${songId1}`,
-          song_id: songId2,
-          similar_song_id: songId1
-        });
-      }
-    }
-    await supabase.from('song_similarities').upsert(similarities, { onConflict: 'id' });
-  }
+  // Remove song_similarities upsert, as table no longer exists.
 
   return results;
 }

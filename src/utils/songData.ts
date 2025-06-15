@@ -1,960 +1,255 @@
-import { SongCategoryType, determineSongCategory, MoodParams } from './fuzzyLogic';
+import { supabase } from '@/integrations/supabase/client';
+import { Song, SongCategoryType } from '@/utils/fuzzyLogic';
 
-// Song data structure
-export interface Song {
+export interface DatabaseSong {
   id: string;
   title: string;
   artist: string;
   album: string;
-  releaseDate: string;
-  language: 'English' | 'Hindi';
-  category: SongCategoryType;
-  coverImage: string;
+  release_date: string;
+  language: string; // Allow any string from the database
+  category: string;
+  cover_image: string | null;
   duration: string;
-  spotifyUrl?: string;
-  similarSongs?: string[];
+  spotify_url: string | null;
   tags: string[];
-  description: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-// Expanded song database with 100+ songs and corrected Spotify URLs
-export const songDatabase: Song[] = [
-  // CALM - English Songs (20 songs)
-  {
-    id: 'en-calm-1',
-    title: 'Weightless',
-    artist: 'Marconi Union',
-    album: 'Weightless',
-    releaseDate: '2012-11-13',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b2732d60677a02438991cc6b25ea',
-    duration: '8:09',
-    spotifyUrl: 'https://open.spotify.com/track/4wLXwxDeWQ8mtUIRPxGiD6',
-    similarSongs: ['en-calm-2', 'en-calm-3'],
-    tags: ['ambient', 'relaxation', 'meditation'],
-    description: 'Specifically designed with sound therapists to reduce stress levels.'
-  },
-  {
-    id: 'en-calm-2',
-    title: 'Saturn',
-    artist: 'Sleeping At Last',
-    album: 'Atlas: Space',
-    releaseDate: '2014-09-19',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i1.sndcdn.com/artworks-000262175996-6q9ovb-t500x500.jpg',
-    duration: '4:49',
-    spotifyUrl: 'https://open.spotify.com/track/1oOD1pVZX8a1AxXdGUM5qK',
-    similarSongs: ['en-calm-1', 'en-relaxed-1'],
-    tags: ['cinematic', 'orchestral', 'peaceful'],
-    description: 'A beautifully composed orchestral piece evoking wonder about the universe.'
-  },
-  {
-    id: 'en-calm-3',
-    title: 'River Flows In You',
-    artist: 'Yiruma',
-    album: 'First Love',
-    releaseDate: '2001-12-01',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273a1a2f9ef42c94cdca25813e4',
-    duration: '3:11',
-    spotifyUrl: 'https://open.spotify.com/track/4uihyQTBLSwZCnHFPoCj7c',
-    similarSongs: ['en-calm-1', 'en-calm-2'],
-    tags: ['piano', 'instrumental', 'peaceful'],
-    description: 'A gentle piano composition creating a serene, flowing atmosphere.'
-  },
-  {
-    id: 'en-calm-4',
-    title: 'Clair de Lune',
-    artist: 'Claude Debussy',
-    album: 'Suite Bergamasque',
-    releaseDate: '1905-01-01',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273f2c7155f97edfbc3c1d1af6d',
-    duration: '5:01',
-    spotifyUrl: 'https://open.spotify.com/track/5spQOVLHcONO7cj2JLoDrT',
-    similarSongs: ['en-calm-3', 'en-calm-1'],
-    tags: ['classical', 'piano', 'impressionist'],
-    description: 'Debussy\'s famous composition creating a dreamy, moonlit atmosphere.'
-  },
-  {
-    id: 'en-calm-5',
-    title: 'Mad World',
-    artist: 'Gary Jules',
-    album: 'Trading Snakeoil for Wolftickets',
-    releaseDate: '2001-05-01',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273e2e352d89826aef6dbd5ff8f',
-    duration: '3:07',
-    spotifyUrl: 'https://open.spotify.com/track/3JOVTQ5h8HGFnDdp4VT3MP',
-    similarSongs: ['en-calm-1', 'en-calm-2'],
-    tags: ['melancholic', 'acoustic', 'cover'],
-    description: 'A haunting acoustic cover transforming the original into an introspective piece.'
-  },
-  {
-    id: 'en-calm-6',
-    title: 'Breathe Me',
-    artist: 'Sia',
-    album: '1000 Forms of Fear',
-    releaseDate: '2014-07-04',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273cd2bb76c98813c3cf0d60d09',
-    duration: '4:32',
-    spotifyUrl: 'https://open.spotify.com/track/4sBwFXFllBfOzFYjmRhBYD',
-    similarSongs: ['en-calm-5', 'en-calm-7'],
-    tags: ['emotional', 'vulnerable', 'piano'],
-    description: 'A vulnerable ballad showcasing Sia\'s emotional range and powerful vocals.'
-  },
-  {
-    id: 'en-calm-7',
-    title: 'Hurt',
-    artist: 'Johnny Cash',
-    album: 'American IV: The Man Comes Around',
-    releaseDate: '2002-11-05',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273912ed19536068c1fc2e5ab0a',
-    duration: '3:38',
-    spotifyUrl: 'https://open.spotify.com/track/2EuIV2gDeGaAqFucHXcWIa',
-    similarSongs: ['en-calm-6', 'en-calm-8'],
-    tags: ['country', 'cover', 'emotional'],
-    description: 'Johnny Cash\'s haunting cover filled with raw emotion and vulnerability.'
-  },
-  {
-    id: 'en-calm-8',
-    title: 'The Night We Met',
-    artist: 'Lord Huron',
-    album: 'Strange Trails',
-    releaseDate: '2015-04-07',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b27317875a0610c23d8946454583',
-    duration: '3:28',
-    spotifyUrl: 'https://open.spotify.com/track/3hRV0jL3vUpRrcy398teAU',
-    similarSongs: ['en-calm-7', 'en-calm-9'],
-    tags: ['indie folk', 'nostalgic', 'romantic'],
-    description: 'A wistful ballad about lost love and the desire to return to better times.'
-  },
-  {
-    id: 'en-calm-9',
-    title: 'Hallelujah',
-    artist: 'Jeff Buckley',
-    album: 'Grace',
-    releaseDate: '1994-08-23',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b2738c9bb82e3e8c7dab32b9a524',
-    duration: '6:53',
-    spotifyUrl: 'https://open.spotify.com/track/2mKkYGXqiXMzweSdEsglNK',
-    similarSongs: ['en-calm-8', 'en-calm-10'],
-    tags: ['alternative rock', 'spiritual', 'cover'],
-    description: 'A transcendent cover showcasing Buckley\'s ethereal vocals.'
-  },
-  {
-    id: 'en-calm-10',
-    title: 'Skinny Love',
-    artist: 'Bon Iver',
-    album: 'For Emma, Forever Ago',
-    releaseDate: '2008-02-19',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b2739626ee117a93c158d17aee17',
-    duration: '3:58',
-    spotifyUrl: 'https://open.spotify.com/track/1mwt9hzaH7idmC5UCoOUkz',
-    similarSongs: ['en-calm-9', 'en-calm-1'],
-    tags: ['indie folk', 'acoustic', 'raw'],
-    description: 'A raw, emotive track with stripped-back acoustic guitar.'
-  },
-  {
-    id: 'en-calm-11',
-    title: 'Gymnopédie No.1',
-    artist: 'Erik Satie',
-    album: 'Gymnopédies',
-    releaseDate: '1888-01-01',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273d449ccd8b75847d8afe4fe9e',
-    duration: '3:05',
-    spotifyUrl: 'https://open.spotify.com/track/5NGtFXVpXSvwunEIGeviY3',
-    similarSongs: ['en-calm-3', 'en-calm-1'],
-    tags: ['classical', 'piano', 'minimalist'],
-    description: 'A timeless piano piece known for its gentle, melancholic melody.'
-  },
-  {
-    id: 'en-calm-12',
-    title: 'Breathe',
-    artist: 'Télépopmusik',
-    album: 'Genetic World',
-    releaseDate: '2001-09-18',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273d32123b75d64e15ceaca8b08',
-    duration: '4:22',
-    spotifyUrl: 'https://open.spotify.com/track/1n6cpWo9ant4WguEo91KZh',
-    similarSongs: ['en-calm-1', 'en-calm-4'],
-    tags: ['electronic', 'chillout', 'ambient'],
-    description: 'An ambient electronic piece with soothing vocals and gentle beats.'
-  },
-  {
-    id: 'en-calm-13',
-    title: 'River',
-    artist: 'Leon Bridges',
-    album: 'Coming Home',
-    releaseDate: '2015-06-23',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273a1a2f9ef42c94cdca25813e4',
-    duration: '3:39',
-    spotifyUrl: 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC',
-    similarSongs: ['en-calm-3', 'en-calm-5'],
-    tags: ['soul', 'retro', 'smooth'],
-    description: 'A soulful track with smooth vocals and a calming vibe.'
-  },
-  {
-    id: 'en-calm-14',
-    title: 'Holocene',
-    artist: 'Bon Iver',
-    album: 'Bon Iver',
-    releaseDate: '2011-06-17',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273567b0a6defc057bcbfaedadb',
-    duration: '5:37',
-    spotifyUrl: 'https://open.spotify.com/track/3TZrEkZ0kcs36MJIaTnHtH',
-    similarSongs: ['en-calm-2', 'en-relaxed-1'],
-    tags: ['indie folk', 'atmospheric', 'winter'],
-    description: 'A hauntingly beautiful track with layered instrumentation.'
-  },
-  {
-    id: 'en-calm-15',
-    title: 'Skinny Love (Bon Iver)',
-    artist: 'Birdy',
-    album: 'Birdy',
-    releaseDate: '2011-11-07',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b2739626ee117a93c158d17aee17',
-    duration: '3:58',
-    spotifyUrl: 'https://open.spotify.com/track/1mwt9hzaH7idmC5UCoOUkz',
-    similarSongs: ['en-calm-10', 'en-calm-3'],
-    tags: ['cover', 'indie', 'emotional'],
-    description: 'A delicate cover of Bon Iver\'s classic, with emotive vocals.'
-  },
-  {
-    id: 'en-calm-16',
-    title: 'Lost Cause',
-    artist: 'Beck',
-    album: 'Morning Phase',
-    releaseDate: '2014-02-25',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273a1a2f9ef42c94cdca25813e4',
-    duration: '3:50',
-    spotifyUrl: 'https://open.spotify.com/track/3JOVTQ5h8HGFnDdp4VT3MP',
-    similarSongs: ['en-calm-5', 'en-calm-6'],
-    tags: ['folk', 'melancholic', 'acoustic'],
-    description: 'A melancholic folk track with introspective lyrics.'
-  },
-  {
-    id: 'en-calm-17',
-    title: 'Cherry Wine',
-    artist: 'Hozier',
-    album: 'Hozier',
-    releaseDate: '2014-09-19',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273d449ccd8b75847d8afe4fe9e',
-    duration: '4:00',
-    spotifyUrl: 'https://open.spotify.com/track/5NGtFXVpXSvwunEIGeviY3',
-    similarSongs: ['en-calm-11', 'en-calm-12'],
-    tags: ['indie', 'folk', 'emotional'],
-    description: 'A gentle folk song with poignant lyrics and soft instrumentation.'
-  },
-  {
-    id: 'en-calm-18',
-    title: 'Slow Dancing in a Burning Room',
-    artist: 'John Mayer',
-    album: 'Continuum',
-    releaseDate: '2006-09-12',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b27317875a0610c23d8946454583',
-    duration: '4:02',
-    spotifyUrl: 'https://open.spotify.com/track/3hRV0jL3vUpRrcy398teAU',
-    similarSongs: ['en-calm-8', 'en-calm-9'],
-    tags: ['blues', 'rock', 'emotional'],
-    description: 'A bluesy rock ballad with soulful guitar and heartfelt vocals.'
-  },
-  {
-    id: 'en-calm-19',
-    title: 'The Blower\'s Daughter',
-    artist: 'Damien Rice',
-    album: 'O',
-    releaseDate: '2002-07-01',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b2738c9bb82e3e8c7dab32b9a524',
-    duration: '4:44',
-    spotifyUrl: 'https://open.spotify.com/track/2mKkYGXqiXMzweSdEsglNK',
-    similarSongs: ['en-calm-9', 'en-calm-10'],
-    tags: ['folk', 'acoustic', 'emotional'],
-    description: 'A haunting acoustic ballad with raw emotional delivery.'
-  },
-  {
-    id: 'en-calm-20',
-    title: 'Fix You',
-    artist: 'Coldplay',
-    album: 'X&Y',
-    releaseDate: '2005-06-06',
-    language: 'English',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273d32123b75d64e15ceaca8b08',
-    duration: '4:55',
-    spotifyUrl: 'https://open.spotify.com/track/1n6cpWo9ant4WguEo91KZh',
-    similarSongs: ['en-calm-12', 'en-calm-13'],
-    tags: ['rock', 'emotional', 'anthem'],
-    description: 'An uplifting rock ballad with emotional build-up and hopeful lyrics.'
-  },
+// Get recommended songs based on multiple categories and membership values
+export const getRecommendedSongs = async (
+  primaryCategory: SongCategoryType,
+  memberships: Record<SongCategoryType, number>,
+  count: number = 20,
+  includeEnglish: boolean = true,
+  includeHindi: boolean = true
+): Promise<Song[]> => {
+  try {
+    console.log('Getting recommended songs:', {
+      primaryCategory,
+      memberships,
+      count,
+      includeEnglish,
+      includeHindi
+    });
 
-  // CALM - Hindi Songs (20 songs)
-  {
-    id: 'hi-calm-1',
-    title: 'Tum Hi Ho',
-    artist: 'Arijit Singh',
-    album: 'Aashiqui 2',
-    releaseDate: '2013-04-08',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273ab8eb21eeda8094f7741534f',
-    duration: '4:22',
-    spotifyUrl: 'https://open.spotify.com/track/5mEqD9DdbVCBwMOjBMsGIN',
-    similarSongs: ['hi-calm-2', 'hi-relaxed-1'],
-    tags: ['bollywood', 'romantic', 'ballad'],
-    description: 'A soulful ballad that became an instant classic.'
-  },
-  {
-    id: 'hi-calm-2',
-    title: 'Luka Chuppi',
-    artist: 'A.R. Rahman, Lata Mangeshkar',
-    album: 'Rang De Basanti',
-    releaseDate: '2006-01-26',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273a58a09b161c806587fe97b6e',
-    duration: '5:35',
-    spotifyUrl: 'https://open.spotify.com/track/3X0K547Xv86304SldRTKBF',
-    similarSongs: ['hi-calm-1', 'hi-relaxed-2'],
-    tags: ['soundtrack', 'emotional', 'classical'],
-    description: 'A hauntingly beautiful composition featuring Lata Mangeshkar.'
-  },
-  {
-    id: 'hi-calm-3',
-    title: 'Ae Dil Hai Mushkil',
-    artist: 'Arijit Singh',
-    album: 'Ae Dil Hai Mushkil',
-    releaseDate: '2016-10-28',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://i.ytimg.com/vi/wx89ZdkwtS8/maxresdefault.jpg',
-    duration: '4:29',
-    spotifyUrl: 'https://open.spotify.com/track/4r3GHJQHHkxvXR18e9tKA7',
-    similarSongs: ['hi-calm-1', 'hi-calm-2'],
-    tags: ['bollywood', 'emotional', 'piano'],
-    description: 'A melancholic ballad showcasing Arijit Singh\'s emotive vocals.'
-  },
-  {
-    id: 'hi-calm-4',
-    title: 'Main Agar Kahoon',
-    artist: 'Sonu Nigam, Shreya Ghoshal',
-    album: 'Om Shanti Om',
-    releaseDate: '2007-11-09',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273675b3f7dea80153c73581e5e',
-    duration: '5:08',
-    spotifyUrl: 'https://open.spotify.com/track/0vM3iPTLQgkFylQvHCn9jS',
-    similarSongs: ['hi-calm-1', 'hi-calm-3'],
-    tags: ['bollywood', 'romantic', 'duet'],
-    description: 'A tender romantic duet featuring complementary vocals.'
-  },
-  {
-    id: 'hi-calm-5',
-    title: 'Bol Na Halke Halke',
-    artist: 'Rahat Fateh Ali Khan, Mahalakshmi Iyer',
-    album: 'Jhoom Barabar Jhoom',
-    releaseDate: '2007-06-15',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://philicpiano.com/wp-content/uploads/2022/05/Bol-Na-Halke-Halke.jpg',
-    duration: '5:10',
-    spotifyUrl: 'https://open.spotify.com/track/6g6YfNvqZjyWeuFx0Vt7Zz',
-    similarSongs: ['hi-calm-2', 'hi-calm-4'],
-    tags: ['sufi', 'romantic', 'melodic'],
-    description: 'A soothing Sufi-inspired composition with gentle percussion.'
-  },
-  {
-    id: 'hi-calm-6',
-    title: 'Raabta',
-    artist: 'Arijit Singh',
-    album: 'Agent Vinod',
-    releaseDate: '2012-03-23',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://c.saavncdn.com/216/Agent-Vinod-Hindi-2012-20190607040631-500x500.jpg',
-    duration: '4:05',
-    spotifyUrl: 'https://open.spotify.com/track/5eFQZWnBFbfLunlSJfwRjl',
-    similarSongs: ['hi-calm-1', 'hi-calm-3'],
-    tags: ['bollywood', 'romantic', 'soulful'],
-    description: 'A deeply emotional song about soul connections.'
-  },
-  {
-    id: 'hi-calm-7',
-    title: 'Shayad',
-    artist: 'Arijit Singh',
-    album: 'Love Aaj Kal',
-    releaseDate: '2020-02-14',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://c.saavncdn.com/191/Love-Aaj-Kal-Hindi-2020-20200214040807-500x500.jpg',
-    duration: '3:18',
-    spotifyUrl: 'https://open.spotify.com/track/2FQaSRPOsKPeBAAv1HS5nD',
-    similarSongs: ['hi-calm-1', 'hi-calm-6'],
-    tags: ['bollywood', 'melancholic', 'piano'],
-    description: 'A tender ballad about uncertainty in love.'
-  },
-  {
-    id: 'hi-calm-8',
-    title: 'Tujh Mein Rab Dikhta Hai',
-    artist: 'Roop Kumar Rathod',
-    album: 'Rab Ne Bana Di Jodi',
-    releaseDate: '2008-12-12',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273d449ccd8b75847d8afe4fe9e',
-    duration: '4:30',
-    spotifyUrl: 'https://open.spotify.com/track/5NGtFXVpXSvwunEIGeviY3',
-    similarSongs: ['hi-calm-4', 'hi-calm-5'],
-    tags: ['bollywood', 'romantic', 'ballad'],
-    description: 'A romantic ballad expressing deep love and devotion.'
-  },
-  {
-    id: 'hi-calm-9',
-    title: 'Phir Le Aaya Dil',
-    artist: 'Rekha Bhardwaj',
-    album: 'Barfi!',
-    releaseDate: '2012-09-14',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b27317875a0610c23d8946454583',
-    duration: '4:15',
-    spotifyUrl: 'https://open.spotify.com/track/3hRV0jL3vUpRrcy398teAU',
-    similarSongs: ['hi-calm-8', 'hi-calm-7'],
-    tags: ['bollywood', 'emotional', 'classical'],
-    description: 'A soulful track with classical Indian influences.'
-  },
-  {
-    id: 'hi-calm-10',
-    title: 'Tera Ban Jaunga',
-    artist: 'Akhil Sachdeva, Tulsi Kumar',
-    album: 'Kabir Singh',
-    releaseDate: '2019-06-21',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273f2c7155f97edfbc3c1d1af6d',
-    duration: '4:05',
-    spotifyUrl: 'https://open.spotify.com/track/5spQOVLHcONO7cj2JLoDrT',
-    similarSongs: ['hi-calm-9', 'hi-calm-6'],
-    tags: ['bollywood', 'romantic', 'ballad'],
-    description: 'A romantic ballad with heartfelt lyrics and soothing melody.'
-  },
-  {
-    id: 'hi-calm-11',
-    title: 'Agar Tum Saath Ho',
-    artist: 'Alka Yagnik, Arijit Singh',
-    album: 'Tamasha',
-    releaseDate: '2015-11-04',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273da50894e074ecd5ce61de0a1',
-    duration: '5:41',
-    spotifyUrl: 'https://open.spotify.com/track/4E5P1XyAFtrjpiIxkydly4',
-    similarSongs: ['hi-calm-1', 'hi-relaxed-2'],
-    tags: ['bollywood', 'emotional', 'duet'],
-    description: 'A soulful duet with emotional depth and beautiful vocals.'
-  },
-  {
-    id: 'hi-calm-12',
-    title: 'Tujhe Kitna Chahne Lage',
-    artist: 'Arijit Singh',
-    album: 'Kabir Singh',
-    releaseDate: '2019-06-21',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273a1a2f9ef42c94cdca25813e4',
-    duration: '4:20',
-    spotifyUrl: 'https://open.spotify.com/track/4uihyQTBLSwZCnHFPoCj7c',
-    similarSongs: ['hi-calm-10', 'hi-calm-11'],
-    tags: ['bollywood', 'romantic', 'ballad'],
-    description: 'A heartfelt romantic ballad with expressive vocals.'
-  },
-  {
-    id: 'hi-calm-13',
-    title: 'Tum Se Hi',
-    artist: 'Mohit Chauhan',
-    album: 'Jab We Met',
-    releaseDate: '2007-10-26',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://images.genius.com/62667f1b93a95247fb37501a4166f39b.1000x1000x1.jpg',
-    duration: '5:09',
-    spotifyUrl: 'https://open.spotify.com/track/5EmrVzA7C5GhOJKxwsBZQP',
-    similarSongs: ['hi-calm-12', 'hi-calm-11'],
-    tags: ['bollywood', 'romantic', 'acoustic'],
-    description: 'A gentle love song with warm vocals and acoustic arrangement.'
-  },
-  {
-    id: 'hi-calm-14',
-    title: 'Jeene Laga Hoon',
-    artist: 'Atif Aslam, Shreya Ghoshal',
-    album: 'Ramaiya Vastavaiya',
-    releaseDate: '2013-07-19',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273675b3f7dea80153c73581e5e',
-    duration: '4:10',
-    spotifyUrl: 'https://open.spotify.com/track/0vM3iPTLQgkFylQvHCn9jS',
-    similarSongs: ['hi-calm-13', 'hi-calm-12'],
-    tags: ['bollywood', 'romantic', 'duet'],
-    description: 'A romantic duet with soothing vocals and melody.'
-  },
-  {
-    id: 'hi-calm-15',
-    title: 'Tera Yaar Hoon Main',
-    artist: 'Arijit Singh',
-    album: 'Sonu Ke Titu Ki Sweety',
-    releaseDate: '2018-02-23',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273ab8eb21eeda8094f7741534f',
-    duration: '4:05',
-    spotifyUrl: 'https://open.spotify.com/track/5mEqD9DdbVCBwMOjBMsGIN',
-    similarSongs: ['hi-calm-14', 'hi-calm-13'],
-    tags: ['bollywood', 'emotional', 'ballad'],
-    description: 'A heartfelt ballad about friendship and love.'
-  },
-  {
-    id: 'hi-calm-16',
-    title: 'Phir Kabhi',
-    artist: 'Arijit Singh',
-    album: 'Murder 2',
-    releaseDate: '2011-07-08',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273a58a09b161c806587fe97b6e',
-    duration: '4:30',
-    spotifyUrl: 'https://open.spotify.com/track/3X0K547Xv86304SldRTKBF',
-    similarSongs: ['hi-calm-15', 'hi-calm-14'],
-    tags: ['bollywood', 'romantic', 'emotional'],
-    description: 'A romantic track with emotional depth and soothing melody.'
-  },
-  {
-    id: 'hi-calm-17',
-    title: 'Tujhko Jo Paaya',
-    artist: 'Mohit Chauhan',
-    album: 'Crook',
-    releaseDate: '2010-07-23',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273d449ccd8b75847d8afe4fe9e',
-    duration: '4:15',
-    spotifyUrl: 'https://open.spotify.com/track/5NGtFXVpXSvwunEIGeviY3',
-    similarSongs: ['hi-calm-16', 'hi-calm-15'],
-    tags: ['bollywood', 'romantic', 'ballad'],
-    description: 'A romantic ballad with heartfelt lyrics and soothing vocals.'
-  },
-  {
-    id: 'hi-calm-18',
-    title: 'Tera Hone Laga Hoon',
-    artist: 'Atif Aslam, Shreya Ghoshal',
-    album: 'Ajab Prem Ki Ghazab Kahani',
-    releaseDate: '2009-09-04',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273f2c7155f97edfbc3c1d1af6d',
-    duration: '4:05',
-    spotifyUrl: 'https://open.spotify.com/track/5spQOVLHcONO7cj2JLoDrT',
-    similarSongs: ['hi-calm-17', 'hi-calm-16'],
-    tags: ['bollywood', 'romantic', 'duet'],
-    description: 'A romantic duet with beautiful melody and vocals.'
-  },
-  {
-    id: 'hi-calm-19',
-    title: 'Tujhe Kitna Chahne Lage',
-    artist: 'Arijit Singh',
-    album: 'Kabir Singh',
-    releaseDate: '2019-06-21',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273a1a2f9ef42c94cdca25813e4',
-    duration: '4:20',
-    spotifyUrl: 'https://open.spotify.com/track/4uihyQTBLSwZCnHFPoCj7c',
-    similarSongs: ['hi-calm-18', 'hi-calm-17'],
-    tags: ['bollywood', 'romantic', 'ballad'],
-    description: 'A heartfelt romantic ballad with expressive vocals.'
-  },
-  {
-    id: 'hi-calm-20',
-    title: 'Tera Ban Jaunga',
-    artist: 'Akhil Sachdeva, Tulsi Kumar',
-    album: 'Kabir Singh',
-    releaseDate: '2019-06-21',
-    language: 'Hindi',
-    category: 'calm',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273f2c7155f97edfbc3c1d1af6d',
-    duration: '4:05',
-    spotifyUrl: 'https://open.spotify.com/track/5spQOVLHcONO7cj2JLoDrT',
-    similarSongs: ['hi-calm-19', 'hi-calm-18'],
-    tags: ['bollywood', 'romantic', 'ballad'],
-    description: 'A romantic ballad with heartfelt lyrics and soothing melody.'
-  },
+    let languages: ('English' | 'Hindi')[] = [];
+    if (includeEnglish) languages.push('English');
+    if (includeHindi) languages.push('Hindi');
 
-  // RELAXED - English Songs (10 songs)
-  {
-    id: 'en-relaxed-1',
-    title: 'Landslide',
-    artist: 'Fleetwood Mac',
-    album: 'Fleetwood Mac',
-    releaseDate: '1975-07-11',
-    language: 'English',
-    category: 'relaxed',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b2734fb043195e8d07e72edc7226',
-    duration: '3:19',
-    spotifyUrl: 'https://open.spotify.com/track/5ihS6UUlyQAfmp8sAQnQgQ',
-    similarSongs: ['en-relaxed-2', 'en-calm-2'],
-    tags: ['folk', 'classic rock', 'acoustic'],
-    description: 'Stevie Nicks\' introspective lyrics and simple guitar accompaniment.'
-  },
-  {
-    id: 'en-relaxed-2',
-    title: 'Holocene',
-    artist: 'Bon Iver',
-    album: 'Bon Iver',
-    releaseDate: '2011-06-17',
-    language: 'English',
-    category: 'relaxed',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273567b0a6defc057bcbfaedadb',
-    duration: '5:37',
-    spotifyUrl: 'https://open.spotify.com/track/3TZrEkZ0kcs36MJIaTnHtH',
-    similarSongs: ['en-relaxed-1', 'en-moderate-1'],
-    tags: ['indie folk', 'atmospheric', 'winter'],
-    description: 'A hauntingly beautiful track with layered instrumentation.'
-  },
-  {
-    id: 'en-relaxed-3',
-    title: 'Harvest Moon',
-    artist: 'Neil Young',
-    album: 'Harvest Moon',
-    releaseDate: '1992-10-27',
-    language: 'English',
-    category: 'relaxed',
-    coverImage: 'https://upload.wikimedia.org/wikipedia/en/8/8d/Harvest_Moon_single.jpg',
-    duration: '5:03',
-    spotifyUrl: 'https://open.spotify.com/track/5LYJ631w9ps5h9tdvac7yP',
-    similarSongs: ['en-relaxed-1', 'en-relaxed-2'],
-    tags: ['folk rock', 'acoustic', 'romantic'],
-    description: 'A warm, nostalgic love song with gentle acoustic guitar.'
-  },
-  {
-    id: 'en-relaxed-4',
-    title: 'Skinny Love',
-    artist: 'Bon Iver',
-    album: 'For Emma, Forever Ago',
-    releaseDate: '2008-02-19',
-    language: 'English',
-    category: 'relaxed',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b2739626ee117a93c158d17aee17',
-    duration: '3:58',
-    spotifyUrl: 'https://open.spotify.com/track/1mwt9hzaH7idmC5UCoOUkz',
-    similarSongs: ['en-relaxed-2', 'en-relaxed-5'],
-    tags: ['indie folk', 'acoustic', 'raw'],
-    description: 'A raw, emotive track with stripped-back acoustic guitar.'
-  },
-  {
-    id: 'en-relaxed-5',
-    title: 'The Night We Met',
-    artist: 'Lord Huron',
-    album: 'Strange Trails',
-    releaseDate: '2015-04-07',
-    language: 'English',
-    category: 'relaxed',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b27317875a0610c23d8946454583',
-    duration: '3:28',
-    spotifyUrl: 'https://open.spotify.com/track/3hRV0jL3vUpRrcy398teAU',
-    similarSongs: ['en-relaxed-4', 'en-relaxed-3'],
-    tags: ['indie folk', 'nostalgic', 'soundtrack'],
-    description: 'A hauntingly nostalgic track with reverb-drenched vocals.'
-  },
-  {
-    id: 'en-relaxed-6',
-    title: 'Vienna',
-    artist: 'Billy Joel',
-    album: 'The Stranger',
-    releaseDate: '1977-09-29',
-    language: 'English',
-    category: 'relaxed',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b2734ae1c4c5c45aabe565499163',
-    duration: '3:34',
-    spotifyUrl: 'https://open.spotify.com/track/3T9UKU3p0TUECcwABgUvsj',
-    similarSongs: ['en-relaxed-1', 'en-relaxed-3'],
-    tags: ['classic rock', 'piano', 'wisdom'],
-    description: 'A thoughtful piano-driven song about taking time to appreciate life.'
-  },
-  {
-    id: 'en-relaxed-7',
-    title: 'Black',
-    artist: 'Pearl Jam',
-    album: 'Ten',
-    releaseDate: '1991-08-27',
-    language: 'English',
-    category: 'relaxed',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273747aa4e2ee18bb66f5b63c54',
-    duration: '5:43',
-    spotifyUrl: 'https://open.spotify.com/track/4qbCRlvE5Bb9XNBjQgWrpU',
-    similarSongs: ['en-relaxed-4', 'en-relaxed-5'],
-    tags: ['grunge', 'emotional', 'guitar'],
-    description: 'An emotionally powerful ballad with passionate vocals.'
-  },
-  {
-    id: 'en-relaxed-8',
-    title: 'The Sound of Silence',
-    artist: 'Disturbed',
-    album: 'Immortalized',
-    releaseDate: '2015-08-21',
-    language: 'English',
-    category: 'relaxed',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273b5c20bf546c61c49db9dcb80',
-    duration: '4:08',
-    spotifyUrl: 'https://open.spotify.com/track/2LTlO3NuNVN7jTleR66hVD',
-    similarSongs: ['en-relaxed-6', 'en-relaxed-7'],
-    tags: ['cover', 'orchestral', 'powerful'],
-    description: 'A dramatic orchestral cover with powerful vocals.'
-  },
-  {
-    id: 'en-relaxed-9',
-    title: 'Slow Dancing in a Burning Room',
-    artist: 'John Mayer',
-    album: 'Continuum',
-    releaseDate: '2006-09-12',
-    language: 'English',
-    category: 'relaxed',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b27317875a0610c23d8946454583',
-    duration: '4:02',
-    spotifyUrl: 'https://open.spotify.com/track/3hRV0jL3vUpRrcy398teAU',
-    similarSongs: ['en-relaxed-8', 'en-relaxed-7'],
-    tags: ['blues', 'rock', 'emotional'],
-    description: 'A bluesy rock ballad with soulful guitar and heartfelt vocals.'
-  },
-  {
-    id: 'en-relaxed-10',
-    title: 'Cherry Wine',
-    artist: 'Hozier',
-    album: 'Hozier',
-    releaseDate: '2014-09-19',
-    language: 'English',
-    category: 'relaxed',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273d449ccd8b75847d8afe4fe9e',
-    duration: '4:00',
-    spotifyUrl: 'https://open.spotify.com/track/5NGtFXVpXSvwunEIGeviY3',
-    similarSongs: ['en-relaxed-9', 'en-relaxed-8'],
-    tags: ['indie', 'folk', 'emotional'],
-    description: 'A gentle folk song with poignant lyrics and soft instrumentation.'
-  },
+    if (languages.length === 0) {
+      console.log('No languages selected');
+      return [];
+    }
 
-  // RELAXED - Hindi Songs (10 songs)
-  {
-    id: 'hi-relaxed-1',
-    title: 'Agar Tum Saath Ho',
-    artist: 'Arijit Singh, Alka Yagnik',
-    album: 'Tamasha',
-    releaseDate: '2015-11-04',
-    language: 'Hindi',
-    category: 'relaxed',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273da50894e074ecd5ce61de0a1',
-    duration: '5:41',
-    spotifyUrl: 'https://open.spotify.com/track/4E5P1XyAFtrjpiIxkydly4',
-    similarSongs: ['hi-calm-1', 'hi-relaxed-2'],
-    tags: ['bollywood', 'emotional', 'duet'],
-    description: 'A soulful composition performed by Arijit Singh and Alka Yagnik.'
-  },
-  {
-    id: 'hi-relaxed-2',
-    title: 'Kabira',
-    artist: 'Arijit Singh, Harshdeep Kaur',
-    album: 'Yeh Jawaani Hai Deewani',
-    releaseDate: '2013-05-28',
-    language: 'Hindi',
-    category: 'relaxed',
-    coverImage: 'https://c.saavncdn.com/440/Yeh-Jawaani-Hai-Deewani-2013-500x500.jpg',
-    duration: '3:43',
-    spotifyUrl: 'https://open.spotify.com/track/2KGxABXWDYuykkSQdhtj8G',
-    similarSongs: ['hi-relaxed-1', 'hi-moderate-1'],
-    tags: ['bollywood', 'melodic', 'philosophical'],
-    description: 'A melodious track with philosophical undertones.'
-  },
-  {
-    id: 'hi-relaxed-3',
-    title: 'Tum Se Hi',
-    artist: 'Mohit Chauhan',
-    album: 'Jab We Met',
-    releaseDate: '2007-10-26',
-    language: 'Hindi',
-    category: 'relaxed',
-    coverImage: 'https://images.genius.com/62667f1b93a95247fb37501a4166f39b.1000x1000x1.jpg',
-    duration: '5:09',
-    spotifyUrl: 'https://open.spotify.com/track/5EmrVzA7C5GhOJKxwsBZQP',
-    similarSongs: ['hi-relaxed-2', 'hi-relaxed-4'],
-    tags: ['bollywood', 'romantic', 'acoustic'],
-    description: 'A gentle love song with warm vocals and acoustic arrangement.'
-  },
-  {
-    id: 'hi-relaxed-4',
-    title: 'Jeena Jeena',
-    artist: 'Atif Aslam',
-    album: 'Badlapur',
-    releaseDate: '2015-01-23',
-    language: 'Hindi',
-    category: 'relaxed',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b2731c903077054df0697fa1e9fd',
-    duration: '3:50',
-    spotifyUrl: 'https://open.spotify.com/track/0Vl6nQ13lFzq2HxS5RUj3g',
-    similarSongs: ['hi-relaxed-3', 'hi-relaxed-5'],
-    tags: ['bollywood', 'romantic', 'soothing'],
-    description: 'A mellow romantic track with distinctive vocal texture.'
-  },
-  {
-    id: 'hi-relaxed-5',
-    title: 'Phir Se Ud Chala',
-    artist: 'Mohit Chauhan',
-    album: 'Rockstar',
-    releaseDate: '2011-09-30',
-    language: 'Hindi',
-    category: 'relaxed',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b27354e544672baa16145d67612b',
-    duration: '4:25',
-    spotifyUrl: 'https://open.spotify.com/track/6VMIB1Ty8xG1jRwZmHyqRs',
-    similarSongs: ['hi-relaxed-3', 'hi-moderate-1'],
-    tags: ['bollywood', 'travel', 'inspirational'],
-    description: 'A composition creating a sense of freedom and adventure.'
-  },
-  {
-    id: 'hi-relaxed-6',
-    title: 'Hamari Adhuri Kahani',
-    artist: 'Arijit Singh',
-    album: 'Hamari Adhuri Kahani',
-    releaseDate: '2015-06-12',
-    language: 'Hindi',
-    category: 'relaxed',
-    coverImage: 'https://c.saavncdn.com/364/Hamari-Adhuri-Kahani-Hindi-2015-500x500.jpg',
-    duration: '5:08',
-    spotifyUrl: 'https://open.spotify.com/track/3tmd33VoNlA6N4KKDaE7IT',
-    similarSongs: ['hi-relaxed-1', 'hi-relaxed-4'],
-    tags: ['bollywood', 'romantic', 'emotional'],
-    description: 'A heart-wrenching ballad about incomplete love stories.'
-  },
-  {
-    id: 'hi-relaxed-7',
-    title: 'Khamoshiyan',
-    artist: 'Arijit Singh',
-    album: 'Khamoshiyan',
-    releaseDate: '2015-01-30',
-    language: 'Hindi',
-    category: 'relaxed',
-    coverImage: 'https://c.saavncdn.com/364/Khamoshiyan-Hindi-2015-500x500.jpg',
-    duration: '4:39',
-    spotifyUrl: 'https://open.spotify.com/track/3UKxJNB3jvX9xFGNUU9MlG',
-    similarSongs: ['hi-relaxed-5', 'hi-relaxed-6'],
-    tags: ['bollywood', 'mysterious', 'haunting'],
-    description: 'A haunting melody about unspoken words and silent conversations.'
-  },
-  {
-    id: 'hi-relaxed-8',
-    title: 'Tere Bina',
-    artist: 'A.R. Rahman, Chinmayi Sripaada',
-    album: 'Guru',
-    releaseDate: '2007-08-10',
-    language: 'Hindi',
-    category: 'relaxed',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273d32123b75d64e15ceaca8b08',
-    duration: '4:22',
-    spotifyUrl: 'https://open.spotify.com/track/1n6cpWo9ant4WguEo91KZh',
-    similarSongs: ['hi-relaxed-6', 'hi-relaxed-7'],
-    tags: ['bollywood', 'romantic', 'emotional'],
-    description: 'A soulful romantic track with beautiful instrumentation.'
-  },
-  {
-    id: 'hi-relaxed-9',
-    title: 'Tujh Mein Rab Dikhta Hai',
-    artist: 'Roop Kumar Rathod',
-    album: 'Rab Ne Bana Di Jodi',
-    releaseDate: '2008-12-12',
-    language: 'Hindi',
-    category: 'relaxed',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273d449ccd8b75847d8afe4fe9e',
-    duration: '4:30',
-    spotifyUrl: 'https://open.spotify.com/track/5NGtFXVpXSvwunEIGeviY3',
-    similarSongs: ['hi-relaxed-8', 'hi-relaxed-7'],
-    tags: ['bollywood', 'romantic', 'ballad'],
-    description: 'A romantic ballad expressing deep love and devotion.'
-  },
-  {
-    id: 'hi-relaxed-10',
-    title: 'Tera Ban Jaunga',
-    artist: 'Akhil Sachdeva, Tulsi Kumar',
-    album: 'Kabir Singh',
-    releaseDate: '2019-06-21',
-    language: 'Hindi',
-    category: 'relaxed',
-    coverImage: 'https://i.scdn.co/image/ab67616d0000b273f2c7155f97edfbc3c1d1af6d',
-    duration: '4:05',
-    spotifyUrl: 'https://open.spotify.com/track/5spQOVLHcONO7cj2JLoDrT',
-    similarSongs: ['hi-relaxed-9', 'hi-relaxed-8'],
-    tags: ['bollywood', 'romantic', 'ballad'],
-    description: 'A romantic ballad with heartfelt lyrics and soothing melody.'
+    // Build query with language filter
+    let query = supabase
+      .from('songs')
+      .select('*');
+
+    if (languages.length === 1) {
+      query = query.eq('language', languages[0]);
+    } else if (languages.length === 2) {
+      query = query.in('language', languages);
+    }
+
+    const { data: allSongs, error } = await query;
+
+    if (error) {
+      console.error('Error fetching songs:', error);
+      throw error;
+    }
+
+    if (!allSongs || allSongs.length === 0) {
+      console.log('No songs found in database');
+      return [];
+    }
+
+    console.log('Total songs available:', allSongs.length);
+
+    // Sort categories by membership values (highest preference first)
+    const sortedCategories = Object.entries(memberships)
+      .sort((a, b) => b[1] - a[1])
+      .map(([cat]) => cat as SongCategoryType);
+
+    console.log('Categories sorted by preference:', sortedCategories);
+
+    let resultSongs: typeof allSongs = [];
+
+    // First, add songs from primary category
+    const primarySongs = allSongs.filter(song => song.category === primaryCategory);
+    resultSongs.push(...primarySongs);
+    console.log(`Added ${primarySongs.length} songs from primary category: ${primaryCategory}`);
+
+    // Then add from other categories in order of preference
+    for (const category of sortedCategories) {
+      if (category !== primaryCategory && resultSongs.length < count) {
+        const categorySongs = allSongs.filter(song => 
+          song.category === category && 
+          !resultSongs.some(existing => existing.id === song.id)
+        );
+        resultSongs.push(...categorySongs);
+        console.log(`Added ${categorySongs.length} songs from category: ${category}`);
+      }
+    }
+
+    // If we still don't have enough songs, add remaining songs
+    if (resultSongs.length < count) {
+      const remainingSongs = allSongs.filter(song => 
+        !resultSongs.some(existing => existing.id === song.id)
+      );
+      resultSongs.push(...remainingSongs);
+      console.log(`Added ${remainingSongs.length} remaining songs`);
+    }
+
+    // Shuffle and limit results
+    const shuffled = resultSongs.sort(() => 0.5 - Math.random());
+    const result = shuffled.slice(0, count).map(transformDatabaseSongToSong);
+    
+    console.log('Final recommended songs:', result.length);
+    return result;
+  } catch (error) {
+    console.error('Error in getRecommendedSongs:', error);
+    return [];
   }
-];
-
-// Legacy functions - these now use the database service
-export const getSongsByCategory = async (category: SongCategoryType, language?: 'English' | 'Hindi'): Promise<Song[]> => {
-  const { getSongsByCategory: dbGetSongsByCategory } = await import('@/services/songService');
-  return dbGetSongsByCategory(category, language);
 };
 
-export const getSimilarSongs = async (songId: string, limit: number = 3): Promise<Song[]> => {
-  const { getSimilarSongs: dbGetSimilarSongs } = await import('@/services/songService');
-  return dbGetSimilarSongs(songId, limit);
+// Transform database song to application song format
+const transformDatabaseSongToSong = (dbSong: DatabaseSong): Song => {
+  // Accept string `language` and cast to union (or fallback to 'English')
+  let language: "English" | "Hindi" = dbSong.language === "Hindi" ? "Hindi" : "English";
+  return {
+    id: dbSong.id,
+    title: dbSong.title,
+    artist: dbSong.artist,
+    album: dbSong.album,
+    releaseDate: dbSong.release_date,
+    language,
+    category: dbSong.category as SongCategoryType,
+    coverImage: dbSong.cover_image || '/placeholder.svg',
+    duration: dbSong.duration,
+    spotifyUrl: dbSong.spotify_url || undefined,
+    similarSongs: [],
+    tags: dbSong.tags || [],
+    description: dbSong.description || ''
+  };
 };
 
+// Get songs by category and language
+export const getSongsByCategory = async (
+  category: SongCategoryType, 
+  language?: 'English' | 'Hindi'
+): Promise<Song[]> => {
+  try {
+    console.log('Fetching songs by category:', category, 'language:', language);
+    
+    let query = supabase
+      .from('songs')
+      .select('*')
+      .eq('category', category);
+
+    if (language) {
+      query = query.eq('language', language);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching songs by category:', error);
+      throw error;
+    }
+
+    console.log('Songs fetched:', data?.length || 0);
+    return (data ?? []).map(transformDatabaseSongToSong);
+  } catch (error) {
+    console.error('Error in getSongsByCategory:', error);
+    return [];
+  }
+};
+
+// Get songs by the same artist, excluding the current song
+export const getSimilarSongsByArtist = async (
+  songId: string,
+  artist: string,
+  limit: number = 3
+): Promise<Song[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('songs')
+      .select('*')
+      .eq('artist', artist)
+      .neq('id', songId)
+      .limit(limit);
+
+    if (error) {
+      console.error('Error fetching similar songs by artist:', error);
+      return [];
+    }
+
+    return (data ?? []).map(transformDatabaseSongToSong);
+  } catch (error) {
+    console.error('Error in getSimilarSongsByArtist:', error);
+    return [];
+  }
+};
+
+// Check if database has songs
+export const isDatabasePopulated = async (): Promise<boolean> => {
+  try {
+    console.log('Checking if database has songs...');
+    
+    const { count, error } = await supabase
+      .from('songs')
+      .select('*', { count: 'exact', head: true });
+
+    if (error) {
+      console.error('Error checking database:', error);
+      return false;
+    }
+
+    const isPopulated = (count || 0) > 0;
+    console.log('Database check result:', isPopulated, 'songs count:', count);
+    return isPopulated;
+  } catch (error) {
+    console.error('Error in isDatabasePopulated:', error);
+    return false;
+  }
+};
+
+// Get random songs by category
 export const getRandomSongsByCategory = async (
   category: SongCategoryType, 
   count: number = 3, 
   language?: 'English' | 'Hindi'
 ): Promise<Song[]> => {
-  const { getRandomSongsByCategory: dbGetRandomSongsByCategory } = await import('@/services/songService');
-  return dbGetRandomSongsByCategory(category, count, language);
-};
+  try {
+    console.log('Fetching random songs by category:', category, 'count:', count, 'language:', language);
+    
+    let query = supabase
+      .from('songs')
+      .select('*')
+      .eq('category', category);
 
-export const getRecommendedSongs = async (
-  params: MoodParams, 
-  count: number = 5,
-  includeEnglish: boolean = true,
-  includeHindi: boolean = true
-): Promise<Song[]> => {
-  const { category, memberships } = determineSongCategory(params);
-  const { getRecommendedSongs: dbGetRecommendedSongs } = await import('@/services/songService');
-  return dbGetRecommendedSongs(category, memberships, count, includeEnglish, includeHindi);
+    if (language) {
+      query = query.eq('language', language);
+    }
+
+    const { data, error } = await query.limit(count * 2); // Get more to shuffle
+
+    if (error) {
+      console.error('Error fetching random songs:', error);
+      throw error;
+    }
+
+    // Shuffle the results
+    const shuffled = (data ?? []).sort(() => 0.5 - Math.random());
+    const result = shuffled.slice(0, count).map(transformDatabaseSongToSong);
+    console.log('Random songs fetched:', result.length);
+    return result;
+  } catch (error) {
+    console.error('Error in getRandomSongsByCategory:', error);
+    return [];
+  }
 };

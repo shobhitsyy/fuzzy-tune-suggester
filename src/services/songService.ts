@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Song, SongCategoryType } from '@/utils/fuzzyLogic';
 
@@ -7,8 +8,8 @@ export interface DatabaseSong {
   artist: string;
   album: string;
   release_date: string;
-  language: 'English' | 'Hindi';
-  category: SongCategoryType;
+  language: string; // Allow any string from the database
+  category: string;
   cover_image: string | null;
   duration: string;
   spotify_url: string | null;
@@ -118,14 +119,16 @@ export const getRecommendedSongs = async (
 
 // Transform database song to application song format
 const transformDatabaseSongToSong = (dbSong: DatabaseSong): Song => {
+  // Accept string `language` and cast to union (or fallback to 'English')
+  let language: "English" | "Hindi" = dbSong.language === "Hindi" ? "Hindi" : "English";
   return {
     id: dbSong.id,
     title: dbSong.title,
     artist: dbSong.artist,
     album: dbSong.album,
     releaseDate: dbSong.release_date,
-    language: dbSong.language,
-    category: dbSong.category,
+    language,
+    category: dbSong.category as SongCategoryType,
     coverImage: dbSong.cover_image || '/placeholder.svg',
     duration: dbSong.duration,
     spotifyUrl: dbSong.spotify_url || undefined,
@@ -160,14 +163,12 @@ export const getSongsByCategory = async (
     }
 
     console.log('Songs fetched:', data?.length || 0);
-    return data?.map(transformDatabaseSongToSong) || [];
+    return (data ?? []).map(transformDatabaseSongToSong);
   } catch (error) {
     console.error('Error in getSongsByCategory:', error);
     return [];
   }
 };
-
-// Remove the old getSimilarSongs function and replace with artist-based variant
 
 // Get songs by the same artist, excluding the current song
 export const getSimilarSongsByArtist = async (
@@ -188,7 +189,7 @@ export const getSimilarSongsByArtist = async (
       return [];
     }
 
-    return data?.map(transformDatabaseSongToSong) ?? [];
+    return (data ?? []).map(transformDatabaseSongToSong);
   } catch (error) {
     console.error('Error in getSimilarSongsByArtist:', error);
     return [];
@@ -244,7 +245,7 @@ export const getRandomSongsByCategory = async (
     }
 
     // Shuffle the results
-    const shuffled = data?.sort(() => 0.5 - Math.random()) || [];
+    const shuffled = (data ?? []).sort(() => 0.5 - Math.random());
     const result = shuffled.slice(0, count).map(transformDatabaseSongToSong);
     console.log('Random songs fetched:', result.length);
     return result;
@@ -253,3 +254,4 @@ export const getRandomSongsByCategory = async (
     return [];
   }
 };
+
