@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Song, SongCategoryType } from '@/utils/fuzzyLogic';
 
@@ -9,7 +10,7 @@ export interface DatabaseSong {
   album: string;
   release_date: string;
   language: string; // <-- Accept any string, as in DB
-  category: SongCategoryType;
+  category: string; // was SongCategoryType, now string as returned by DB
   cover_image: string | null;
   duration: string;
   spotify_url: string | null;
@@ -19,10 +20,27 @@ export interface DatabaseSong {
   updated_at: string;
 }
 
+// Helper: Valid categories
+const VALID_CATEGORIES: SongCategoryType[] = [
+  'calm', 'relaxed', 'moderate', 'upbeat', 'energetic'
+];
+
+// Helper: validate and cast string to SongCategoryType
+function getValidCategory(input: string): SongCategoryType {
+  return VALID_CATEGORIES.includes(input as SongCategoryType)
+    ? (input as SongCategoryType)
+    : 'moderate';
+}
+
+// Helper: validate language
+function getValidLanguage(input: string): 'English' | 'Hindi' {
+  return input === "English" || input === "Hindi" ? input : "English";
+}
+
 export const getRecommendedSongs = async (
   primaryCategory: SongCategoryType,
   memberships: Record<SongCategoryType, number>,
-  count: number = 1000, // default to 1000 or whatever large number from UI
+  count: number = 1000,
   includeEnglish: boolean = true,
   includeHindi: boolean = true
 ) => {
@@ -35,6 +53,7 @@ export const getRecommendedSongs = async (
     let query = supabase
       .from('songs')
       .select('*');
+
     if (languages.length === 1) {
       query = query.eq('language', languages[0]);
     } else if (languages.length === 2) {
@@ -48,12 +67,12 @@ export const getRecommendedSongs = async (
       .map(([cat]) => cat[0] as SongCategoryType);
 
     let resultSongs: typeof allSongs = [];
-    const primarySongs = allSongs.filter(song => song.category === primaryCategory);
+    const primarySongs = allSongs.filter(song => getValidCategory(song.category) === primaryCategory);
     resultSongs.push(...primarySongs);
     for (const category of sortedCategories) {
       if (category !== primaryCategory && resultSongs.length < count) {
         const categorySongs = allSongs.filter(song => 
-          song.category === category && 
+          getValidCategory(song.category) === category && 
           !resultSongs.some(existing => existing.id === song.id)
         );
         resultSongs.push(...categorySongs);
@@ -67,7 +86,7 @@ export const getRecommendedSongs = async (
     }
     // Shuffle and limit only if needed
     const shuffled = resultSongs.sort(() => 0.5 - Math.random());
-    // Remove slice/count limitation - return all
+    // Map to Song using safe transformer
     const result = shuffled.map(transformDatabaseSongToSong);
     return result;
   } catch (error) {
@@ -75,7 +94,6 @@ export const getRecommendedSongs = async (
   }
 };
 
-// Accept string for language
 const transformDatabaseSongToSong = (dbSong: DatabaseSong): Song => {
   return {
     id: dbSong.id,
@@ -83,8 +101,8 @@ const transformDatabaseSongToSong = (dbSong: DatabaseSong): Song => {
     artist: dbSong.artist,
     album: dbSong.album,
     releaseDate: dbSong.release_date,
-    language: dbSong.language,
-    category: dbSong.category,
+    language: getValidLanguage(dbSong.language),
+    category: getValidCategory(dbSong.category),
     coverImage: dbSong.cover_image || '/placeholder.svg',
     duration: dbSong.duration,
     spotifyUrl: dbSong.spotify_url || undefined,
@@ -101,7 +119,7 @@ export const getSongsByCategory = async (
 ): Promise<Song[]> => {
   try {
     console.log('Fetching songs by category:', category, 'language:', language);
-    
+
     let query = supabase
       .from('songs')
       .select('*')
@@ -119,7 +137,7 @@ export const getSongsByCategory = async (
     }
 
     console.log('Songs fetched:', data?.length || 0);
-    return data?.map(transformDatabaseSongToSong) || [];
+    return (data || []).map(transformDatabaseSongToSong);
   } catch (error) {
     console.error('Error in getSongsByCategory:', error);
     return [];
@@ -130,7 +148,7 @@ export const getSongsByCategory = async (
 export const getSimilarSongs = async (songId: string, limit: number = 3): Promise<Song[]> => {
   try {
     console.log('Fetching similar songs for:', songId);
-    
+
     const { data: similarities, error: similarityError } = await supabase
       .from('song_similarities')
       .select('similar_song_id')
@@ -148,11 +166,11 @@ export const getSimilarSongs = async (songId: string, limit: number = 3): Promis
     }
 
     const similarSongIds = similarities.map(s => s.similar_song_id).filter(Boolean);
-    
+
     if (similarSongIds.length === 0) {
       return [];
     }
-    
+
     const { data: songs, error: songsError } = await supabase
       .from('songs')
       .select('*')
@@ -164,7 +182,7 @@ export const getSimilarSongs = async (songId: string, limit: number = 3): Promis
     }
 
     console.log('Similar songs fetched:', songs?.length || 0);
-    return songs?.map(transformDatabaseSongToSong) || [];
+    return (songs || []).map(transformDatabaseSongToSong);
   } catch (error) {
     console.error('Error in getSimilarSongs:', error);
     return [];
@@ -175,7 +193,7 @@ export const getSimilarSongs = async (songId: string, limit: number = 3): Promis
 export const isDatabasePopulated = async (): Promise<boolean> => {
   try {
     console.log('Checking if database has songs...');
-    
+
     const { count, error } = await supabase
       .from('songs')
       .select('*', { count: 'exact', head: true });
@@ -202,7 +220,7 @@ export const getRandomSongsByCategory = async (
 ): Promise<Song[]> => {
   try {
     console.log('Fetching random songs by category:', category, 'count:', count, 'language:', language);
-    
+
     let query = supabase
       .from('songs')
       .select('*')
@@ -220,7 +238,7 @@ export const getRandomSongsByCategory = async (
     }
 
     // Shuffle the results
-    const shuffled = data?.sort(() => 0.5 - Math.random()) || [];
+    const shuffled = (data || []).sort(() => 0.5 - Math.random());
     const result = shuffled.slice(0, count).map(transformDatabaseSongToSong);
     console.log('Random songs fetched:', result.length);
     return result;
