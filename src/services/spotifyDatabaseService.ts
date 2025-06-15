@@ -111,8 +111,8 @@ export const addCuratedSongsToDatabase = async () => {
       const seconds = Math.floor((durationMs % 60000) / 1000);
       const duration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
-      // Get album release date, fallback to a default
-      const releaseDate = spotifyTrack.album?.release_date || '2023-01-01';
+      // Get album release date from Spotify, fallback to a default
+      const releaseDate = (spotifyTrack.album as any)?.release_date || '2023-01-01';
 
       console.log(`Inserting song: ${spotifyTrack.name} with Spotify data`);
       console.log(`Category: ${song.category}, Release Date: ${releaseDate}`);
