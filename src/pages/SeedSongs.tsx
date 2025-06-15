@@ -147,8 +147,8 @@ export default function SeedSongs() {
     async function seedAndFixSimilarities() {
       try {
         await addSongsListToDatabase(SONGS);
-        await ensureSimilarSongsForAll(); // Run the similarity fixer immediately after seeding.
-        alert("Seeding complete and similar songs ensured!");
+        await ensureSimilarSongsForAll(); // Add this line: ensure 3 similar songs per new song
+        alert("Seeding complete, and similar songs ensured for all!");
       } catch (e) {
         alert("Seeding or fixing similarities failed, see console.");
         console.error(e);
