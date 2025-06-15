@@ -1,6 +1,7 @@
 
 import { useEffect } from "react";
 import { addSongsListToDatabase } from "@/services/spotifyDatabaseService";
+import { ensureSimilarSongsForAll } from "@/utils/FixSimilarSongs";
 
 // 100+ unique songs (English & Hindi), not in your provided exclusion list
 const SONGS = [
@@ -143,13 +144,18 @@ const SONGS = [
 
 export default function SeedSongs() {
   useEffect(() => {
-    addSongsListToDatabase(SONGS)
-      .then(() => {
-        alert("Seeding complete!");
-      })
-      .catch(() => {
-        alert("Seeding failed, see console.");
-      });
+    async function seedAndFixSimilarities() {
+      try {
+        await addSongsListToDatabase(SONGS);
+        await ensureSimilarSongsForAll(); // Run the similarity fixer immediately after seeding.
+        alert("Seeding complete and similar songs ensured!");
+      } catch (e) {
+        alert("Seeding or fixing similarities failed, see console.");
+        console.error(e);
+      }
+    }
+    seedAndFixSimilarities();
   }, []);
-  return <div>Seeding songs... Check your console for the result.</div>;
+
+  return <div>Seeding songs and fixing similar songs... Check your console for the result.</div>;
 }
