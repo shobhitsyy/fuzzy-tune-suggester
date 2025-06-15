@@ -1,11 +1,11 @@
 
 import { spotifyService } from './spotifyService';
 import { supabase } from '@/integrations/supabase/client';
-import { SongCategory } from '@/utils/fuzzyLogic';
+import { SongCategoryType } from '@/utils/fuzzyLogic';
 
 // Audio features mapping to our song categories
-const getAudioFeatureCategories = (features: any): SongCategory[] => {
-  const categories: SongCategory[] = [];
+const getAudioFeatureCategories = (features: any): SongCategoryType[] => {
+  const categories: SongCategoryType[] = [];
   
   // High energy + high valence = energetic
   if (features.energy > 0.7 && features.valence > 0.6) {
@@ -40,14 +40,14 @@ const getAudioFeatureCategories = (features: any): SongCategory[] => {
 const searchSpotifyForSong = async (title: string, artist: string) => {
   try {
     const query = `track:"${title}" artist:"${artist}"`;
-    const results = await spotifyService.searchTracks(query, 1);
+    const results = await spotifyService.searchTracks(query);
     
-    if (results.tracks.items.length > 0) {
-      const track = results.tracks.items[0];
+    if (results && results.length > 0) {
+      const track = results[0];
       return {
         spotifyId: track.id,
-        spotifyUrl: track.external_urls.spotify,
-        coverImage: track.album.images[0]?.url || '/placeholder.svg',
+        spotifyUrl: track.external_urls?.spotify,
+        coverImage: track.album?.images?.[0]?.url || '/placeholder.svg',
         audioFeatures: await spotifyService.getAudioFeatures(track.id)
       };
     }
@@ -112,7 +112,7 @@ export const enrichExistingSongs = async (batchSize: number = 50) => {
 };
 
 // Category-specific search terms for discovering new songs
-const categorySearchTerms: Record<SongCategory, string[]> = {
+const categorySearchTerms: Record<SongCategoryType, string[]> = {
   'calm': ['meditation', 'ambient', 'peaceful', 'sleep', 'chill', 'spa'],
   'relaxed': ['acoustic', 'soft rock', 'folk', 'indie', 'mellow'],
   'moderate': ['pop', 'alternative', 'indie pop', 'soft rock'],
@@ -121,7 +121,7 @@ const categorySearchTerms: Record<SongCategory, string[]> = {
 };
 
 // Discover new songs for a specific category
-const discoverSongsForCategory = async (category: SongCategory, limit: number = 20) => {
+const discoverSongsForCategory = async (category: SongCategoryType, limit: number = 20) => {
   const results = { updated: 0, newSongs: 0, errors: 0 };
   
   try {
@@ -129,16 +129,18 @@ const discoverSongsForCategory = async (category: SongCategory, limit: number = 
     const randomTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
     
     // Search for tracks
-    const searchResults = await spotifyService.searchTracks(randomTerm, limit);
+    const searchResults = await spotifyService.searchTracks(randomTerm);
     
-    for (const track of searchResults.tracks.items) {
+    const tracksToProcess = searchResults ? searchResults.slice(0, limit) : [];
+    
+    for (const track of tracksToProcess) {
       try {
         // Check if song already exists
         const { data: existingSong } = await supabase
           .from('songs')
           .select('id')
           .eq('title', track.name)
-          .eq('artist', track.artists[0]?.name)
+          .eq('artist', track.artists?.[0]?.name || 'Unknown Artist')
           .single();
 
         if (!existingSong) {
@@ -146,21 +148,25 @@ const discoverSongsForCategory = async (category: SongCategory, limit: number = 
           const audioFeatures = await spotifyService.getAudioFeatures(track.id);
           const categories = audioFeatures ? getAudioFeatureCategories(audioFeatures) : [category];
           
+          // Generate unique ID
+          const songId = `spotify-${track.id}`;
+          
           // Add new song
           const { error: insertError } = await supabase
             .from('songs')
             .insert({
+              id: songId,
               title: track.name,
-              artist: track.artists[0]?.name || 'Unknown Artist',
-              album: track.album.name,
-              release_date: track.album.release_date || '2023-01-01',
+              artist: track.artists?.[0]?.name || 'Unknown Artist',
+              album: track.album?.name || 'Unknown Album',
+              release_date: track.album?.release_date || '2023-01-01',
               language: 'English', // Default for Spotify tracks
               category: categories[0],
-              cover_image: track.album.images[0]?.url || '/placeholder.svg',
+              cover_image: track.album?.images?.[0]?.url || '/placeholder.svg',
               duration: `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}`,
-              spotify_url: track.external_urls.spotify,
-              tags: [category, track.artists[0]?.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown'],
-              description: `${track.name} by ${track.artists[0]?.name} - A ${category} track perfect for your mood.`
+              spotify_url: track.external_urls?.spotify,
+              tags: [category, track.artists?.[0]?.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown'],
+              description: `${track.name} by ${track.artists?.[0]?.name || 'Unknown Artist'} - A ${category} track perfect for your mood.`
             });
 
           if (!insertError) {
@@ -187,9 +193,9 @@ const discoverSongsForCategory = async (category: SongCategory, limit: number = 
 
 // Update all categories with new songs
 export const updateAllCategories = async () => {
-  const categoryResults: Record<SongCategory, any> = {} as Record<SongCategory, any>;
+  const categoryResults: Record<SongCategoryType, any> = {} as Record<SongCategoryType, any>;
   
-  const categories: SongCategory[] = ['calm', 'relaxed', 'moderate', 'upbeat', 'energetic'];
+  const categories: SongCategoryType[] = ['calm', 'relaxed', 'moderate', 'upbeat', 'energetic'];
   
   for (const category of categories) {
     try {

@@ -7,6 +7,18 @@ export interface MoodParams {
   mood: number; // 0-10 (0 for calm, 10 for Energetic)
 }
 
+// Song genre/type categories - Export as both enum and type
+export enum SongCategory {
+  CALM = 'calm',
+  RELAXED = 'relaxed',
+  MODERATE = 'moderate',
+  UPBEAT = 'upbeat',
+  ENERGETIC = 'energetic'
+}
+
+// Also export as type for compatibility
+export type SongCategoryType = 'calm' | 'relaxed' | 'moderate' | 'upbeat' | 'energetic';
+
 // Song interface
 export interface Song {
   id: string;
@@ -15,7 +27,7 @@ export interface Song {
   album: string;
   releaseDate: string;
   language: 'English' | 'Hindi';
-  category: SongCategory;
+  category: SongCategoryType;
   coverImage: string;
   duration: string;
   spotifyUrl?: string;
@@ -23,9 +35,6 @@ export interface Song {
   tags: string[];
   description: string;
 }
-
-// Song genre/type categories
-export type SongCategory = 'calm' | 'relaxed' | 'moderate' | 'upbeat' | 'energetic';
 
 // Helper function to calculate membership values
 export const calculateMembership = (heartRate: number, activity: number, mood: number) => {
@@ -106,14 +115,14 @@ const energeticMembership = (params: MoodParams): number => {
 
 // Determine the recommended song category based on fuzzy logic
 export const determineSongCategory = (params: MoodParams): { 
-  category: SongCategory, 
-  memberships: Record<SongCategory, number> 
+  category: SongCategoryType, 
+  memberships: Record<SongCategoryType, number> 
 } => {
   // Apply time of day factor as a modifier
   const timeFactor = timeOfDayFactor(params.timeOfDay);
   
   // Calculate memberships for each category
-  const memberships: Record<SongCategory, number> = {
+  const memberships: Record<SongCategoryType, number> = {
     calm: calmMembership(params) * (params.timeOfDay >= 20 || params.timeOfDay <= 7 ? 1.2 : 1),
     relaxed: relaxedMembership(params),
     moderate: moderateMembership(params),
@@ -122,13 +131,13 @@ export const determineSongCategory = (params: MoodParams): {
   };
   
   // Find category with highest membership
-  let maxCategory: SongCategory = 'moderate';
+  let maxCategory: SongCategoryType = 'moderate';
   let maxValue = 0;
   
   Object.entries(memberships).forEach(([category, value]) => {
     if (value > maxValue) {
       maxValue = value;
-      maxCategory = category as SongCategory;
+      maxCategory = category as SongCategoryType;
     }
   });
   

@@ -1,5 +1,6 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { Song, SongCategory } from '@/utils/fuzzyLogic';
+import { Song, SongCategoryType } from '@/utils/fuzzyLogic';
 import { songDatabase } from '@/utils/songData';
 import { allAdditionalSongs } from '@/utils/additionalSongs';
 
@@ -10,7 +11,7 @@ export interface DatabaseSong {
   album: string;
   release_date: string;
   language: 'English' | 'Hindi';
-  category: SongCategory;
+  category: SongCategoryType;
   cover_image: string | null;
   duration: string;
   spotify_url: string | null;
@@ -150,7 +151,7 @@ const getSimilarityScore = (song1: any, song2: any): number => {
 
 // Get songs by category and language
 export const getSongsByCategory = async (
-  category: SongCategory, 
+  category: SongCategoryType, 
   language?: 'English' | 'Hindi'
 ): Promise<Song[]> => {
   try {
@@ -263,8 +264,8 @@ export const getRandomSongsByCategory = async (
 
 // Get recommended songs based on multiple categories and membership values - Updated to return 20 songs
 export const getRecommendedSongs = async (
-  primaryCategory: SongCategory,
-  memberships: Record<SongCategory, number>,
+  primaryCategory: SongCategoryType,
+  memberships: Record<SongCategoryType, number>,
   count: number = 20, // Increased default to 20
   includeEnglish: boolean = true,
   includeHindi: boolean = true
@@ -311,7 +312,7 @@ export const getRecommendedSongs = async (
     if (allSongs.length < count) {
       const sortedCategories = Object.entries(memberships)
         .sort((a, b) => b[1] - a[1])
-        .map(([cat]) => cat as SongCategory)
+        .map(([cat]) => cat as SongCategoryType)
         .filter(cat => cat !== primaryCategory);
 
       console.log('Getting additional songs from categories:', sortedCategories);
