@@ -1,5 +1,4 @@
 
 project_id = "zqtdyfzxzatzymyfitqg"
-
 [functions.fetch-and-enrich-songs]
-verify_jwt = true
+verify_jwt = false
