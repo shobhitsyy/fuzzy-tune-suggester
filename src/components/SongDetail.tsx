@@ -3,9 +3,9 @@ import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, X } from "lucide-react";
-import useSpotifyArtistSongs from "@/hooks/useSpotifyArtistSongs";
+import { X, Play } from "lucide-react";
 import { Song } from "@/utils/fuzzyLogic";
+import { getSongsByCategory } from "@/services/songService";
 
 interface SongDetailProps {
   song: Song | null;
@@ -13,65 +13,77 @@ interface SongDetailProps {
   onClose: () => void;
 }
 const SongDetail: React.FC<SongDetailProps> = ({ song, open, onClose }) => {
-  const { artistSongs, loading } = useSpotifyArtistSongs(song?.artist ?? "", song?.id);
-  const [recommendedSongs, setRecommendedSongs] = useState<{ id: string, cover: string, title: string, album: string }[]>([]);
+  const [artistSongs, setArtistSongs] = useState<Song[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  // Guarantee 3 songs by artist, using Spotify/fallback
   useEffect(() => {
-    if (!song) return;
-    let rec = [...artistSongs];
-    // Prevent duplicates of current song
-    if(rec.length < 3) {
-      // Add current song itself as fallback or dummy
-      rec = [
-        ...rec,
-        ...Array(3 - rec.length).fill(null).map((_, idx) => ({
-          id: song.id + "-fallback-" + idx,
-          cover: song.coverImage,
-          title: song.title,
-          album: song.album,
-        }))
-      ];
+    if (song && open) {
+      setLoading(true);
+      // Fetch songs by this artist (from database), excluding the current song
+      (async () => {
+        // Query all categories for the artist
+        const allByArtist: Song[] = (
+          await Promise.all([
+            getSongsByCategory("upbeat", undefined), // We'll filter below
+            getSongsByCategory("party", undefined),
+            getSongsByCategory("uplifting", undefined),
+            getSongsByCategory("motivational", undefined),
+            getSongsByCategory("calm", undefined),
+            getSongsByCategory("relaxing", undefined),
+            getSongsByCategory("romantic", undefined),
+            getSongsByCategory("nostalgic", undefined),
+            getSongsByCategory("happy", undefined),
+            getSongsByCategory("melancholic", undefined),
+            getSongsByCategory("study", undefined),
+            getSongsByCategory("sad", undefined)
+          ])
+        ).flat();
+        const uniqueByArtist = allByArtist
+          .filter(s => s.artist.toLowerCase() === song.artist.toLowerCase())
+          .filter(s => s.id !== song.id);
+        setArtistSongs(uniqueByArtist);
+        setLoading(false);
+      })();
     } else {
-      rec = rec.slice(0,3);
+      setArtistSongs([]);
     }
-    setRecommendedSongs(rec);
-  }, [artistSongs, song]);
+  }, [song, open]);
 
   if (!song) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="max-w-2xl bg-background rounded-2xl p-0 overflow-hidden border-0 shadow-2xl anim-fade-in">
-        <div className="w-full">
+    <Dialog open={open} onOpenChange={val => !val && onClose()}>
+      <DialogContent className="max-w-2xl w-full p-0 bg-background rounded-2xl border-0 shadow-2xl overflow-hidden animate-fade-in relative">
+        {/* One close button, always at top right */}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="absolute top-3 right-3 z-20 bg-black/40 hover:bg-black/60 text-white rounded-full"
+          onClick={onClose}
+        >
+          <X className="h-6 w-6" />
+        </Button>
+        <div className="w-full flex flex-col">
           {/* Cover image */}
-          <div className="relative w-full h-60 bg-black/10 flex items-center justify-center">
+          <div className="relative w-full h-56 md:h-60 bg-black/10 flex items-center justify-center">
             <img
               src={song.coverImage}
               alt={song.title}
-              className="object-cover w-full h-full rounded-b-xl rounded-t-2xl shadow-xl transition-all"
-              style={{maxHeight:'16rem'}}
+              className="object-cover w-full h-full rounded-t-2xl shadow-xl"
+              style={{ maxHeight: "18rem" }}
             />
-            <Button
-              size="icon"
-              variant="ghost"
-              className="absolute top-4 right-4 bg-black/40 hover:bg-black/60 text-white rounded-full"
-              onClick={onClose}
-            >
-              <X className="h-6 w-6" />
-            </Button>
           </div>
-          {/* Details */}
-          <div className="flex flex-col md:flex-row w-full gap-0 md:gap-6 px-6 py-6 bg-white rounded-b-2xl">
-            {/* Left: Song details */}
+          {/* Details and other songs */}
+          <div className="flex flex-col md:flex-row w-full px-4 md:px-6 py-6 gap-6 bg-white rounded-b-2xl">
+            {/* Song details, left for desktop */}
             <div className="flex-1 min-w-0">
-              <h2 className="font-bold text-2xl mb-0.5 capitalize">{song.title}</h2>
+              <h2 className="font-bold text-xl md:text-2xl mb-1 capitalize break-words">{song.title}</h2>
               <span className="font-semibold text-md text-purple-700">{song.artist}</span>
               <div className="text-xs text-gray-500 mt-1">
-                Album: <span className="font-medium">{song.album}</span><br />
-                Released: {song.releaseDate}<br/>
-                Language: {song.language}<br/>
-                Duration: {song.duration}
+                <div><b>Album:</b> <span className="font-medium">{song.album}</span></div>
+                <div><b>Released:</b> {song.releaseDate}</div>
+                <div><b>Language:</b> {song.language}</div>
+                <div><b>Duration:</b> {song.duration}</div>
               </div>
               <div className="flex flex-wrap gap-1 mt-2 mb-2">
                 <Badge className="capitalize">{song.category}</Badge>
@@ -79,7 +91,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ song, open, onClose }) => {
                   <Badge key={tag} variant="secondary" className="capitalize">{tag}</Badge>
                 ))}
               </div>
-              <p className="text-gray-600 text-sm mt-1 mb-2">
+              <p className="text-gray-600 text-sm mt-1 mb-2 break-words">
                 {song.description || <span className="italic text-gray-400">No description.</span>}
               </p>
               {song.spotifyUrl && (
@@ -92,16 +104,18 @@ const SongDetail: React.FC<SongDetailProps> = ({ song, open, onClose }) => {
                 </Button>
               )}
             </div>
-            {/* Right: Songs by this artist */}
-            <div className="flex-1 min-w-[210px] max-w-[330px] pt-2 pb-1 px-0 pl-1 md:pl-2 border-l border-gray-100">
-              <span className="font-semibold text-lg block mb-3 text-primary">Songs by this Artist</span>
+            {/* Right side: Songs by this artist */}
+            <div className="flex-1 min-w-[180px] max-w-[320px] pt-3 pb-1 pl-0 md:pl-4 border-t md:border-t-0 md:border-l border-gray-100">
+              <span className="font-semibold text-lg block mb-3 text-primary text-left">Songs by this Artist</span>
               {loading ? (
                 <div className="text-xs text-gray-400">Loading songs…</div>
+              ) : artistSongs.length === 0 ? (
+                <div className="text-xs text-gray-400">No other songs found.</div>
               ) : (
                 <ul className="space-y-3">
-                  {recommendedSongs.map((track) => (
-                    <li key={track.id} className="flex gap-2 items-center hover:bg-gray-50 rounded p-1.5 transition-all cursor-pointer">
-                      <img src={track.cover} alt={track.title} className="w-10 h-10 object-cover rounded shadow" />
+                  {artistSongs.map((track) => (
+                    <li key={track.id} className="flex gap-2 items-center hover:bg-gray-50 rounded p-1 transition-all cursor-pointer">
+                      <img src={track.coverImage} alt={track.title} className="w-10 h-10 object-cover rounded shadow" />
                       <div className="flex flex-col min-w-0">
                         <span className="block font-medium text-sm truncate">{track.title}</span>
                         <span className="block text-xs text-gray-500 truncate">{track.album}</span>
@@ -113,8 +127,23 @@ const SongDetail: React.FC<SongDetailProps> = ({ song, open, onClose }) => {
             </div>
           </div>
         </div>
+        {/* Mobile-specific tweaks */}
+        <style>{`
+          @media (max-width: 640px) {
+            .dialog-content {
+              padding: 0 !important;
+              border-radius: 0.75rem !important;
+            }
+            .rounded-t-2xl {
+              border-radius: 1rem 1rem 0 0 !important;
+            }
+            .rounded-b-2xl {
+              border-radius: 0 0 1rem 1rem !important;
+            }
+          }
+        `}</style>
       </DialogContent>
     </Dialog>
   );
-}
+};
 export default SongDetail;

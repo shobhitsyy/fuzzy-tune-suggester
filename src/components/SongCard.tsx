@@ -3,8 +3,6 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Song } from "@/utils/fuzzyLogic";
 import SongDetail from "@/components/SongDetail";
-// import { Button } from "@/components/ui/button";
-// import { Play, Info } from "lucide-react";
 
 interface SongCardProps {
   song: Song;
