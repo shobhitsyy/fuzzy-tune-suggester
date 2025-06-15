@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { calculateMoodMemberships, type MoodInputs, type Song } from "@/utils/fuzzyLogic";
+import { calculateMoodMemberships, type MoodInputs, type Song, type SongCategoryType } from "@/utils/fuzzyLogic";
 import { getRecommendedSongs, isDatabasePopulated } from "@/services/songService";
 import { Music, Sparkles, Heart, Users, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -57,8 +57,8 @@ const Index = () => {
 
       // Find primary category (highest membership)
       const primaryCategory = Object.entries(memberships).reduce((a, b) => 
-        memberships[a[0] as keyof typeof memberships] > memberships[b[0] as keyof typeof memberships] ? a : b
-      )[0] as keyof typeof memberships;
+        memberships[a[0] as SongCategoryType] > memberships[b[0] as SongCategoryType] ? a : b
+      )[0] as SongCategoryType;
 
       console.log('Primary category:', primaryCategory);
 
@@ -172,7 +172,6 @@ const Index = () => {
               <CardContent>
                 <EnhancedMoodSelector 
                   onMoodChange={setMoodInputs}
-                  currentMood={moodInputs}
                 />
               </CardContent>
             </Card>
@@ -188,7 +187,6 @@ const Index = () => {
               <CardContent>
                 <MoodSelector 
                   onMoodChange={setMoodInputs}
-                  currentMood={moodInputs}
                 />
               </CardContent>
             </Card>
@@ -204,7 +202,6 @@ const Index = () => {
               <CardContent>
                 <UserPreferences 
                   onPreferencesChange={setPreferences}
-                  currentPreferences={preferences}
                 />
               </CardContent>
             </Card>
@@ -272,7 +269,7 @@ const Index = () => {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {recommendations.map((song) => (
-                      <SongCard key={song.id} song={song} />
+                      <SongCard key={song.id} song={song} onClick={() => {}} />
                     ))}
                   </div>
                 )}

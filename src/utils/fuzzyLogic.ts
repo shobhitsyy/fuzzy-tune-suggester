@@ -7,6 +7,13 @@ export interface MoodParams {
   mood: number; // 0-10 (0 for calm, 10 for Energetic)
 }
 
+// New interface for the enhanced mood selector
+export interface MoodInputs {
+  energy: number; // 0-10
+  mood: number; // 0-10  
+  focus: number; // 0-10
+}
+
 // Song genre/type categories - Export as both enum and type
 export enum SongCategory {
   CALM = 'calm',
@@ -52,6 +59,17 @@ export const calculateMembership = (heartRate: number, activity: number, mood: n
     upbeat: upbeatMembership(params),
     energetic: energeticMembership(params)
   };
+};
+
+// New function to calculate mood memberships from MoodInputs
+export const calculateMoodMemberships = (inputs: MoodInputs): Record<SongCategoryType, number> => {
+  // Convert MoodInputs to internal calculation parameters
+  // Energy maps to activity level, mood stays same, focus affects heart rate simulation
+  const heartRate = 60 + (inputs.energy * 4) + (inputs.focus * 2); // 60-100 range
+  const activity = inputs.energy; // Direct mapping
+  const mood = inputs.mood; // Direct mapping
+
+  return calculateMembership(heartRate, activity, mood);
 };
 
 // Helper function to map time of day to a 0-1 scale with peaks for different times
