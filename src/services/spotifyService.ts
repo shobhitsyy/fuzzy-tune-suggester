@@ -2,6 +2,7 @@
 // Spotify API integration service
 interface SpotifyConfig {
   clientId: string;
+  clientSecret: string;
   redirectUri: string;
   scopes: string[];
 }
@@ -38,7 +39,8 @@ class SpotifyService {
 
   constructor() {
     this.config = {
-      clientId: '', // Will be set from environment or user input
+      clientId: '7d5065f77c664bf8a372d424bca4c0ca',
+      clientSecret: 'ebee3f74a79b491e8ac818185627db9f',
       redirectUri: `${window.location.origin}`,
       scopes: [
         'streaming',
@@ -56,32 +58,26 @@ class SpotifyService {
     this.accessToken = localStorage.getItem('spotify_access_token');
   }
 
-  // Set Spotify client ID (to be called when user provides credentials)
+  // Set Spotify client ID (backwards compatibility)
   setClientId(clientId: string) {
     this.config.clientId = clientId;
     localStorage.setItem('spotify_client_id', clientId);
   }
 
-  // Get stored client ID
+  // Get client ID
   getClientId(): string {
-    return this.config.clientId || localStorage.getItem('spotify_client_id') || '';
+    return this.config.clientId;
   }
 
-  // Check if Spotify is configured and authenticated
+  // Check if Spotify is authenticated
   isAuthenticated(): boolean {
-    const clientId = this.getClientId();
-    return !!(this.accessToken && clientId);
+    return !!this.accessToken;
   }
 
   // Generate Spotify authorization URL
   getAuthUrl(): string {
-    const clientId = this.getClientId();
-    if (!clientId) {
-      throw new Error('Spotify Client ID not configured');
-    }
-
     const params = new URLSearchParams({
-      client_id: clientId,
+      client_id: this.config.clientId,
       response_type: 'token',
       redirect_uri: this.config.redirectUri,
       scope: this.config.scopes.join(' '),
@@ -148,7 +144,7 @@ class SpotifyService {
       }
 
       const data = await response.json();
-      return data.tracks.items;
+      return data.tracks.items || [];
     } catch (error) {
       console.error('Spotify search error:', error);
       throw error;
@@ -176,7 +172,7 @@ class SpotifyService {
       }
 
       const data = await response.json();
-      return data.audio_features;
+      return data.audio_features || [];
     } catch (error) {
       console.error('Audio features error:', error);
       throw error;
@@ -254,34 +250,6 @@ class SpotifyService {
     } catch (error) {
       console.error('Create playlist error:', error);
       throw error;
-    }
-  }
-
-  // Get user's current playback state
-  async getCurrentPlayback() {
-    if (!this.isAuthenticated()) {
-      return null;
-    }
-
-    try {
-      const response = await fetch('https://api.spotify.com/v1/me/player', {
-        headers: {
-          'Authorization': `Bearer ${this.accessToken}`
-        }
-      });
-
-      if (response.status === 204) {
-        return null; // No active device
-      }
-
-      if (!response.ok) {
-        return null;
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Get playback error:', error);
-      return null;
     }
   }
 

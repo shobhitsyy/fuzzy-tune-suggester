@@ -11,7 +11,7 @@ import { calculateMembership, SongCategoryType, Song } from '@/utils/fuzzyLogic'
 import SongCard from '@/components/SongCard';
 import SongDetail from '@/components/SongDetail';
 import { useToast } from '@/hooks/use-toast';
-import { getRecommendedSongs, isDatabasePopulated, populateDatabase } from '@/services/songService';
+import { getRecommendedSongs, isDatabasePopulated } from '@/services/songService';
 import SpotifyIntegration from '@/components/SpotifyIntegration';
 import SpotifyFeatures from '@/components/SpotifyFeatures';
 import SpotifyDatabaseManager from '@/components/SpotifyDatabaseManager';
@@ -34,24 +34,20 @@ const Index = () => {
       try {
         const isPopulated = await isDatabasePopulated();
         console.log('Database check result:', isPopulated);
+        setIsDbInitialized(isPopulated);
         
         if (!isPopulated) {
-          console.log('Database not populated, attempting to initialize...');
-          setIsDbLoading(true);
-          await populateDatabase();
-          setIsDbInitialized(true);
           toast({
-            title: "Database Initialized",
-            description: "Song database has been automatically populated.",
+            title: "No Songs Found",
+            description: "The song database appears to be empty. Please check your database.",
+            variant: "destructive",
           });
-        } else {
-          setIsDbInitialized(true);
         }
       } catch (error) {
-        console.error('Error checking/initializing database:', error);
+        console.error('Error checking database:', error);
         toast({
           title: "Database Error",
-          description: "Failed to initialize the song database. Please try manually.",
+          description: "Failed to check the song database.",
           variant: "destructive",
         });
       } finally {
@@ -61,27 +57,6 @@ const Index = () => {
 
     checkDatabase();
   }, [toast]);
-
-  const handleInitializeDatabase = async () => {
-    setIsDbLoading(true);
-    try {
-      await populateDatabase();
-      setIsDbInitialized(true);
-      toast({
-        title: "Database Initialized",
-        description: "Song database has been successfully populated.",
-      });
-    } catch (error) {
-      console.error('Error initializing database:', error);
-      toast({
-        title: "Database Error",
-        description: "Failed to initialize the song database. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDbLoading(false);
-    }
-  };
 
   const handleGenerateRecommendations = async () => {
     if (!includeEnglish && !includeHindi) {
@@ -128,7 +103,7 @@ const Index = () => {
       if (songs.length === 0) {
         toast({
           title: "No Songs Found",
-          description: "Try adjusting your mood parameters or language preferences. The database may need to be reinitialized.",
+          description: "No songs match your current preferences. Try adjusting your mood parameters or language preferences.",
           variant: "destructive",
         });
       } else {
@@ -303,37 +278,20 @@ const Index = () => {
 
         {/* Generate Button */}
         <div className="flex justify-center mb-8">
-          {!isDbInitialized && !isDbLoading ? (
-            <Button 
-              onClick={handleInitializeDatabase} 
-              disabled={isDbLoading}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-6 text-lg rounded-xl"
-            >
-              {isDbLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Initializing Database...</span>
-                </div>
-              ) : (
-                <span>Initialize Song Database</span>
-              )}
-            </Button>
-          ) : (
-            <Button 
-              onClick={handleGenerateRecommendations} 
-              disabled={isLoading || isDbLoading || (!includeEnglish && !includeHindi)}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-6 text-lg rounded-xl"
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Generating...</span>
-                </div>
-              ) : (
-                <span>Generate Music Recommendations</span>
-              )}
-            </Button>
-          )}
+          <Button 
+            onClick={handleGenerateRecommendations} 
+            disabled={isLoading || isDbLoading || (!includeEnglish && !includeHindi)}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-6 text-lg rounded-xl"
+          >
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <span>Generating...</span>
+              </div>
+            ) : (
+              <span>Generate Music Recommendations</span>
+            )}
+          </Button>
         </div>
 
         {/* Spotify Features */}
