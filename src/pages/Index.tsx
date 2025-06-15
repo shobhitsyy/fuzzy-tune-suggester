@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,16 +33,34 @@ const Index = () => {
     const checkDatabase = async () => {
       try {
         const isPopulated = await isDatabasePopulated();
-        setIsDbInitialized(isPopulated);
-        setIsDbLoading(false);
+        console.log('Database check result:', isPopulated);
+        
+        if (!isPopulated) {
+          console.log('Database not populated, attempting to initialize...');
+          setIsDbLoading(true);
+          await populateDatabase();
+          setIsDbInitialized(true);
+          toast({
+            title: "Database Initialized",
+            description: "Song database has been automatically populated.",
+          });
+        } else {
+          setIsDbInitialized(true);
+        }
       } catch (error) {
-        console.error('Error checking database:', error);
+        console.error('Error checking/initializing database:', error);
+        toast({
+          title: "Database Error",
+          description: "Failed to initialize the song database. Please try manually.",
+          variant: "destructive",
+        });
+      } finally {
         setIsDbLoading(false);
       }
     };
 
     checkDatabase();
-  }, []);
+  }, [toast]);
 
   const handleInitializeDatabase = async () => {
     setIsDbLoading(true);
@@ -80,6 +99,7 @@ const Index = () => {
     try {
       // Calculate fuzzy memberships based on user inputs
       const memberships = calculateMembership(heartRate, activity, mood);
+      console.log('Calculated memberships:', memberships);
       
       // Find the primary category (highest membership value)
       let primaryCategory: SongCategoryType = 'moderate';
@@ -91,6 +111,8 @@ const Index = () => {
           primaryCategory = category as SongCategoryType;
         }
       });
+
+      console.log('Primary category:', primaryCategory);
 
       // Get recommended songs
       const songs = await getRecommendedSongs(
@@ -106,7 +128,7 @@ const Index = () => {
       if (songs.length === 0) {
         toast({
           title: "No Songs Found",
-          description: "Try adjusting your mood parameters or language preferences.",
+          description: "Try adjusting your mood parameters or language preferences. The database may need to be reinitialized.",
           variant: "destructive",
         });
       } else {

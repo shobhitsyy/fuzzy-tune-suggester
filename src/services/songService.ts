@@ -33,21 +33,13 @@ export const populateDatabase = async (): Promise<void> => {
   try {
     console.log('Starting to populate database with songs...');
     
-    // First, check if data already exists
-    const { count: existingSongsCount } = await supabase
-      .from('songs')
-      .select('*', { count: 'exact', head: true });
-
-    if (existingSongsCount && existingSongsCount >= 100) {
-      console.log('Database already has 100+ songs, skipping population');
-      return;
-    }
-    
-    // Combine all song collections - now just using the single additionalSongs array
+    // Combine all song collections
     const allSongs = [
       ...songDatabase,
       ...allAdditionalSongs
     ];
+
+    console.log('Total songs to insert:', allSongs.length);
 
     // Insert all songs
     const songsToInsert = allSongs.map(song => ({
@@ -65,12 +57,16 @@ export const populateDatabase = async (): Promise<void> => {
       description: song.description
     }));
 
-    console.log('Inserting songs:', songsToInsert.length);
+    console.log('Prepared songs for insertion:', songsToInsert.length);
     
     // Insert in batches to avoid timeout
-    const batchSize = 20;
+    const batchSize = 10;
+    let totalInserted = 0;
+    
     for (let i = 0; i < songsToInsert.length; i += batchSize) {
       const batch = songsToInsert.slice(i, i + batchSize);
+      console.log(`Inserting batch ${Math.floor(i/batchSize) + 1} with ${batch.length} songs`);
+      
       const { data: insertedSongs, error: songsError } = await supabase
         .from('songs')
         .upsert(batch, { onConflict: 'id' })
@@ -81,72 +77,24 @@ export const populateDatabase = async (): Promise<void> => {
         throw songsError;
       }
 
+      totalInserted += insertedSongs?.length || 0;
       console.log(`Batch ${Math.floor(i/batchSize) + 1} inserted successfully:`, insertedSongs?.length || 0);
     }
 
-    // Create comprehensive similarity relationships
-    const similaritiesToInsert: { song_id: string; similar_song_id: string }[] = [];
-    
-    // Generate similarities for all songs
-    allSongs.forEach(song => {
-      const similarSongs = allSongs
-        .filter(otherSong => 
-          otherSong.id !== song.id && 
-          (otherSong.category === song.category || 
-           Math.abs(getSimilarityScore(song, otherSong)) > 0.7)
-        )
-        .slice(0, 3); // Limit to 3 similar songs per song
+    console.log(`Successfully inserted ${totalInserted} songs total`);
 
-      similarSongs.forEach(similarSong => {
-        similaritiesToInsert.push({
-          song_id: song.id,
-          similar_song_id: similarSong.id
-        });
-      });
-    });
+    // Verify insertion
+    const { count: finalCount } = await supabase
+      .from('songs')
+      .select('*', { count: 'exact', head: true });
 
-    if (similaritiesToInsert.length > 0) {
-      console.log('Inserting similarities:', similaritiesToInsert.length);
-      
-      // Insert similarities in batches
-      for (let i = 0; i < similaritiesToInsert.length; i += batchSize) {
-        const batch = similaritiesToInsert.slice(i, i + batchSize);
-        const { data: insertedSimilarities, error: similaritiesError } = await supabase
-          .from('song_similarities')
-          .upsert(batch, { onConflict: 'song_id,similar_song_id' })
-          .select();
+    console.log('Final song count in database:', finalCount);
 
-        if (similaritiesError) {
-          console.error('Error inserting similarity batch:', similaritiesError);
-          throw similaritiesError;
-        }
-
-        console.log(`Similarity batch ${Math.floor(i/batchSize) + 1} inserted:`, insertedSimilarities?.length || 0);
-      }
-    }
-
-    console.log('Database populated successfully with 100+ songs');
+    console.log('Database populated successfully');
   } catch (error) {
     console.error('Error populating database:', error);
     throw error;
   }
-};
-
-// Helper function to calculate similarity score
-const getSimilarityScore = (song1: any, song2: any): number => {
-  let score = 0;
-  
-  // Same language
-  if (song1.language === song2.language) score += 0.3;
-  
-  // Similar tags
-  const commonTags = song1.tags.filter((tag: string) => song2.tags.includes(tag));
-  score += (commonTags.length / Math.max(song1.tags.length, song2.tags.length)) * 0.4;
-  
-  // Same category
-  if (song1.category === song2.category) score += 0.3;
-  
-  return score;
 };
 
 // Get songs by category and language
@@ -262,11 +210,11 @@ export const getRandomSongsByCategory = async (
   }
 };
 
-// Get recommended songs based on multiple categories and membership values - Updated to return 20 songs
+// Get recommended songs based on multiple categories and membership values
 export const getRecommendedSongs = async (
   primaryCategory: SongCategoryType,
   memberships: Record<SongCategoryType, number>,
-  count: number = 20, // Increased default to 20
+  count: number = 20,
   includeEnglish: boolean = true,
   includeHindi: boolean = true
 ): Promise<Song[]> => {
@@ -288,63 +236,75 @@ export const getRecommendedSongs = async (
       return [];
     }
 
-    // Get songs from primary category first
+    // First check if we have any songs at all
+    const { count: totalSongs } = await supabase
+      .from('songs')
+      .select('*', { count: 'exact', head: true });
+
+    console.log('Total songs in database:', totalSongs);
+
+    if (!totalSongs || totalSongs === 0) {
+      console.log('No songs found in database, attempting to populate...');
+      await populateDatabase();
+      // Try again after population
+      const { count: newCount } = await supabase
+        .from('songs')
+        .select('*', { count: 'exact', head: true });
+      console.log('Songs after population:', newCount);
+    }
+
+    // Get songs from all categories and then filter/sort
     let query = supabase
       .from('songs')
-      .select('*')
-      .eq('category', primaryCategory);
+      .select('*');
 
     if (languages.length > 0) {
       query = query.in('language', languages);
     }
 
-    const { data: primarySongs, error: primaryError } = await query;
+    const { data: allSongs, error } = await query;
 
-    if (primaryError) {
-      console.error('Error fetching primary songs:', primaryError);
-      throw primaryError;
+    if (error) {
+      console.error('Error fetching all songs:', error);
+      throw error;
     }
 
-    let allSongs = primarySongs || [];
-    console.log('Primary songs found:', allSongs.length);
+    if (!allSongs || allSongs.length === 0) {
+      console.log('No songs found even after population attempt');
+      return [];
+    }
 
-    // If we don't have enough songs, get from other categories
-    if (allSongs.length < count) {
-      const sortedCategories = Object.entries(memberships)
-        .sort((a, b) => b[1] - a[1])
-        .map(([cat]) => cat as SongCategoryType)
-        .filter(cat => cat !== primaryCategory);
+    console.log('Total songs available:', allSongs.length);
 
-      console.log('Getting additional songs from categories:', sortedCategories);
+    // Sort categories by membership values
+    const sortedCategories = Object.entries(memberships)
+      .sort((a, b) => b[1] - a[1])
+      .map(([cat]) => cat as SongCategoryType);
 
-      for (const category of sortedCategories) {
-        if (allSongs.length >= count) break;
+    console.log('Categories sorted by preference:', sortedCategories);
 
-        let additionalQuery = supabase
-          .from('songs')
-          .select('*')
-          .eq('category', category);
+    // Filter and prioritize songs
+    let resultSongs: typeof allSongs = [];
 
-        if (languages.length > 0) {
-          additionalQuery = additionalQuery.in('language', languages);
-        }
+    // First add songs from primary category
+    const primarySongs = allSongs.filter(song => song.category === primaryCategory);
+    resultSongs.push(...primarySongs);
+    console.log(`Added ${primarySongs.length} songs from primary category: ${primaryCategory}`);
 
-        const { data: additionalSongs } = await additionalQuery;
-        
-        if (additionalSongs) {
-          allSongs = [...allSongs, ...additionalSongs];
-          console.log('Additional songs from', category, ':', additionalSongs.length);
-        }
+    // Then add from other categories in order of preference
+    for (const category of sortedCategories) {
+      if (category !== primaryCategory && resultSongs.length < count) {
+        const categorySongs = allSongs.filter(song => 
+          song.category === category && 
+          !resultSongs.some(existing => existing.id === song.id)
+        );
+        resultSongs.push(...categorySongs);
+        console.log(`Added ${categorySongs.length} songs from category: ${category}`);
       }
     }
 
-    // Remove duplicates by id
-    const uniqueSongs = allSongs.filter((song, index, self) => 
-      index === self.findIndex(s => s.id === song.id)
-    );
-
     // Shuffle and limit results
-    const shuffled = uniqueSongs.sort(() => 0.5 - Math.random());
+    const shuffled = resultSongs.sort(() => 0.5 - Math.random());
     const result = shuffled.slice(0, count).map(transformDatabaseSongToSong);
     
     console.log('Final recommended songs:', result.length);
@@ -365,10 +325,10 @@ const transformDatabaseSongToSong = (dbSong: DatabaseSong): Song => {
     releaseDate: dbSong.release_date,
     language: dbSong.language,
     category: dbSong.category,
-    coverImage: dbSong.cover_image || '',
+    coverImage: dbSong.cover_image || '/placeholder.svg',
     duration: dbSong.duration,
     spotifyUrl: dbSong.spotify_url || undefined,
-    similarSongs: [], // This will be populated separately if needed
+    similarSongs: [],
     tags: dbSong.tags,
     description: dbSong.description || ''
   };
