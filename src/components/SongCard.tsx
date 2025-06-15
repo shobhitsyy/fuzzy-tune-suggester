@@ -1,93 +1,88 @@
 
-import React, { useState } from "react";
-import { SongRecommendation } from "@/services/recommendationService";
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Song } from "@/utils/fuzzyLogic";
+import SongCardActions from "@/components/SongCardActions";
+import SongCardTags from "@/components/SongCardTags";
+import LyricSnippet from "@/components/LyricSnippet";
 
 interface SongCardProps {
-  song: SongRecommendation;
-  onClick?: () => void;
+  song: Song;
+  onClick?: (song: Song) => void;
 }
 
 const SongCard: React.FC<SongCardProps> = ({ song, onClick }) => {
-  const [showDetail, setShowDetail] = useState(false);
-
-  const handleCardClick = () => setShowDetail(true);
-  const handleClose = () => setShowDetail(false);
+  const openSpotify = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (song.spotifyUrl) {
+      window.open(song.spotifyUrl, '_blank');
+    }
+  };
 
   return (
-    <>
-      {/* Song Card */}
-      <div
-        role="button"
-        className="
-          group relative rounded-xl bg-gradient-to-br from-[#f4ecff] to-[#eaf8fa] 
-          shadow-xl hover:shadow-2xl mb-3 cursor-pointer
-          border border-purple-100 overflow-hidden 
-          transition-all duration-200 
-          hover:scale-[1.035] 
-          flex flex-col items-stretch
-        "
-        tabIndex={0}
-        aria-label={`Open ${song.title} by ${song.artist}`}
-        onClick={handleCardClick}
-      >
-        {/* Cover image */}
-        <div className="relative w-full aspect-square bg-gray-200 overflow-hidden">
-          <img
-            src={song.cover_image || "/placeholder.svg"}
-            alt={`${song.title} album cover`}
-            className="object-cover w-full h-full transition-transform duration-600 group-hover:scale-110 rounded-t-xl"
-            draggable={false}
-          />
-          {/* Category Bubble */}
-          <span className="absolute top-2 right-2 bg-purple-600/90 text-white text-xs px-2 py-1 rounded-full shadow font-semibold uppercase tracking-wider z-10">
-            {song.category}
-          </span>
-        </div>
-        {/* Details */}
-        <div className="flex-1 flex flex-col gap-2 px-4 py-3 bg-white bg-opacity-90 ">
-          <h3 className="text-lg font-bold text-gray-800 leading-tight truncate">{song.title}</h3>
-          <span className="text-sm text-gray-600 font-medium truncate">{song.artist}</span>
-          <div className="flex items-center gap-2 mt-1 text-xs">
-            <span className="bg-blue-100 text-blue-700 font-medium rounded px-2 py-0.5">{song.language}</span>
-            {song.album && (
-              <span className="ml-auto text-gray-400 text-xs truncate">{song.album}</span>
-            )}
+    <Card 
+      className="bg-white rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer border-0 overflow-hidden group hover:scale-105"
+      onClick={() => onClick?.(song)}
+    >
+      <div className="aspect-square overflow-hidden bg-gray-100 relative">
+        <img 
+          src={song.coverImage} 
+          alt={`${song.title} by ${song.artist}`} 
+          className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-2 sm:p-3">
+          <div className="flex justify-between items-start">
+            <Badge variant="secondary" className="bg-white/20 backdrop-blur text-white border-0 text-xs px-1.5 py-0.5 sm:px-2 sm:py-1">
+              {song.category}
+            </Badge>
           </div>
-          {song.release_date && (
-            <div className="text-gray-400 text-xs">{song.release_date}</div>
-          )}
+          <div className="space-y-1 sm:space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-white/80">{song.duration}</span>
+              {song.spotifyUrl && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="bg-green-600 hover:bg-green-700 text-white rounded-full h-6 w-6 sm:h-8 sm:w-8"
+                  onClick={openSpotify}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="12" fill="white" fillOpacity={0.2} />
+                    <polygon points="9,7 18,12 9,17" fill="white" />
+                  </svg>
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Fullscreen Song Detail overlay */}
-      {showDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative border border-purple-200">
-            <button
-              className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-3xl font-bold"
-              onClick={handleClose}
-              aria-label="Close"
-            >
-              ×
-            </button>
-            <img
-              src={song.cover_image || "/placeholder.svg"}
-              alt={song.title}
-              className="w-44 h-44 rounded-xl object-cover mx-auto mb-4 shadow"
-              draggable={false}
-            />
-            <h2 className="text-2xl font-bold text-center mb-1">{song.title}</h2>
-            <p className="text-center text-gray-600 mb-2">{song.artist}</p>
-            <div className="text-center text-xs text-gray-400 mb-2">{song.album} {song.release_date && ` • ${song.release_date}`}</div>
-            <div className="flex flex-row items-center justify-center gap-2 mt-2 mb-3">
-              <span className="bg-purple-100 text-purple-700 text-sm px-3 py-1 rounded-full font-semibold uppercase">{song.category}</span>
-              <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded">{song.language}</span>
-            </div>
-            {/* Actions could be added here if needed */}
+      <CardContent className="p-2 sm:p-3 space-y-1.5 sm:space-y-2">
+        <div className="space-y-0.5 sm:space-y-1">
+          <h3 className="font-medium truncate text-xs sm:text-sm leading-tight text-gray-800">{song.title}</h3>
+          <p className="text-xs text-gray-500 truncate">{song.artist}</p>
+          {/* Show lyric snippet from DB */}
+          <LyricSnippet lyricSnippet={song.lyric_snippet} />
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-400 capitalize">{song.language}</span>
+            {song.spotifyUrl && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-5 px-2 sm:h-6 sm:px-2 text-xs text-green-600 border-green-200 hover:bg-green-50"
+                onClick={openSpotify}
+              >
+                <span className="sm:hidden">Play</span>
+                <span className="hidden sm:inline">Spotify</span>
+              </Button>
+            )}
           </div>
         </div>
-      )}
-    </>
+        <SongCardActions song={song} />
+        <SongCardTags tags={song.tags} />
+      </CardContent>
+    </Card>
   );
 };
 

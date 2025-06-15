@@ -1,3 +1,4 @@
+
 // Types for our fuzzy input parameters
 export interface MoodParams {
   heartRate: number; // 0-100 (beats per minute normalized)
@@ -37,55 +38,34 @@ export interface Song {
   coverImage: string;
   duration: string;
   spotifyUrl?: string;
+  similarSongs?: string[];
   tags: string[];
   description: string;
 }
 
 // Helper function to calculate membership values
-export const calculateMembership = (
-  heartRate: number,
-  activity: number,
-  mood: number
-) => {
-  // Make "sad" (low mood) really push towards calm/relaxed, not moderate
+export const calculateMembership = (heartRate: number, activity: number, mood: number) => {
   const params: MoodParams = {
     heartRate,
     timeOfDay: new Date().getHours(),
     activity,
-    mood,
+    mood
   };
 
-  const base = {
+  return {
     calm: calmMembership(params),
     relaxed: relaxedMembership(params),
     moderate: moderateMembership(params),
     upbeat: upbeatMembership(params),
-    energetic: energeticMembership(params),
+    energetic: energeticMembership(params)
   };
-  // Adjust for sadness (mood<=3), avoid moderate for low mood
-  if (mood <= 3) {
-    base.calm += 0.5;
-    base.relaxed += 0.25;
-    base.moderate -= 0.7;
-    base.upbeat -= 0.5;
-    base.energetic -= 0.4;
-  }
-  // If high energy/activity, upweight upbeat/energetic strongly
-  if (activity >= 8 || heartRate >= 90) {
-    base.energetic += 0.5;
-    base.upbeat += 0.4;
-    base.calm -= 0.3;
-    base.moderate -= 0.3;
-  }
-  // Never let "moderate" dominate for extreme mood/activity
-  if (Math.abs(mood - 5) > 3) base.moderate -= 0.3;
-  return base;
 };
 
-// New function to calculate mood memberships from MoodInputs (fix: more varied and correct)
+// New function to calculate mood memberships from MoodInputs
 export const calculateMoodMemberships = (inputs: MoodInputs): Record<SongCategoryType, number> => {
-  // Energy maps to activity; focus affects heart rate simulation by a lesser degree
-  const heartRate = 60 + (inputs.energy * 3) + (inputs.focus * 1.5); // 60-105 range
+  // Convert MoodInputs to internal calculation parameters
+  // Energy maps to activity level, mood stays same, focus affects heart rate simulation
+  const heartRate = 60 + (inputs.energy * 4) + (inputs.focus * 2); // 60-100 range
   const activity = inputs.energy; // Direct mapping
   const mood = inputs.mood; // Direct mapping
 
@@ -151,37 +131,34 @@ const energeticMembership = (params: MoodParams): number => {
   return (heartRateFactor * 0.3 + activityFactor * 0.3 + moodFactor * 0.4);
 };
 
-// Determine the recommended song category (fix: avoid always 'moderate', reflect input weights)
+// Determine the recommended song category based on fuzzy logic
 export const determineSongCategory = (params: MoodParams): { 
   category: SongCategoryType, 
   memberships: Record<SongCategoryType, number> 
 } => {
   // Apply time of day factor as a modifier
   const timeFactor = timeOfDayFactor(params.timeOfDay);
-
+  
+  // Calculate memberships for each category
   const memberships: Record<SongCategoryType, number> = {
-    calm: Math.max(0, calmMembership(params) * (params.timeOfDay >= 20 || params.timeOfDay <= 7 ? 1.15 : 1)),
-    relaxed: Math.max(0, relaxedMembership(params)),
-    moderate: Math.max(0, moderateMembership(params) * (Math.abs(params.mood - 5) <= 2 ? 1 : 0.8)),
-    upbeat: Math.max(0, upbeatMembership(params) * (params.activity > 5 ? 1.18 : 1)),
-    energetic: Math.max(0, energeticMembership(params) * (params.heartRate > 85 || params.activity > 7 ? 1.22 : 1))
+    calm: calmMembership(params) * (params.timeOfDay >= 20 || params.timeOfDay <= 7 ? 1.2 : 1),
+    relaxed: relaxedMembership(params),
+    moderate: moderateMembership(params),
+    upbeat: upbeatMembership(params) * (params.timeOfDay >= 8 && params.timeOfDay <= 20 ? 1.2 : 1),
+    energetic: energeticMembership(params) * (params.timeOfDay >= 10 && params.timeOfDay <= 18 ? 1.2 : 1)
   };
-
-  // Sort by value
-  const sorted = Object.entries(memberships)
-    .sort((a, b) => b[1] - a[1]);
-  let maxCategory: SongCategoryType = sorted[0][0] as SongCategoryType;
-  let maxValue = sorted[0][1];
-
-  if (params.mood <= 2) {
-    maxCategory = memberships["calm"] >= memberships["relaxed"] ? "calm" : "relaxed";
-  } else if (params.activity >= 8 || params.heartRate >= 95) {
-    maxCategory = memberships["energetic"] > memberships["upbeat"] ? "energetic" : "upbeat";
-  }
-  // If primary category membership < .2, fallback to next
-  if (memberships[maxCategory] < 0.2 && sorted[1][1] > 0.15)
-    maxCategory = sorted[1][0] as SongCategoryType;
-
+  
+  // Find category with highest membership
+  let maxCategory: SongCategoryType = 'moderate';
+  let maxValue = 0;
+  
+  Object.entries(memberships).forEach(([category, value]) => {
+    if (value > maxValue) {
+      maxValue = value;
+      maxCategory = category as SongCategoryType;
+    }
+  });
+  
   return {
     category: maxCategory,
     memberships

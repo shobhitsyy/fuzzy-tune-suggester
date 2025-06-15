@@ -7,8 +7,8 @@ export interface DatabaseSong {
   artist: string;
   album: string;
   release_date: string;
-  language: string; // was: 'English' | 'Hindi', but Supabase gives string
-  category: string;
+  language: 'English' | 'Hindi';
+  category: SongCategoryType;
   cover_image: string | null;
   duration: string;
   spotify_url: string | null;
@@ -18,30 +18,10 @@ export interface DatabaseSong {
   updated_at: string;
 }
 
-// Narrow values only to 'English' | 'Hindi' if actually typed so
-function assertLanguage(l: string): 'English' | 'Hindi' {
-  return l === 'Hindi' ? 'Hindi' : 'English';
-}
-
-// Helper to assert category
-function assertCategory(cat: string): SongCategoryType {
-  // fallback to moderate for incorrect value
-  if (
-    cat === 'calm' ||
-    cat === 'relaxed' ||
-    cat === 'moderate' ||
-    cat === 'upbeat' ||
-    cat === 'energetic'
-  ) {
-    return cat;
-  }
-  return 'moderate';
-}
-
 export const getRecommendedSongs = async (
   primaryCategory: SongCategoryType,
   memberships: Record<SongCategoryType, number>,
-  count: number = 1000,
+  count: number = 1000, // default to 1000 or whatever large number from UI
   includeEnglish: boolean = true,
   includeHindi: boolean = true
 ) => {
@@ -62,36 +42,31 @@ export const getRecommendedSongs = async (
     const { data: allSongs, error } = await query;
     if (error || !allSongs?.length) return [];
 
-    // Filter and map with proper type correction
-    const allSongsTyped: DatabaseSong[] = allSongs.filter(song =>
-      song.language === 'English' || song.language === 'Hindi'
-    );
-
     const sortedCategories = Object.entries(memberships)
       .sort((a, b) => b[1] - a[1])
       .map(([cat]) => cat[0] as SongCategoryType);
 
-    let resultSongs: typeof allSongsTyped = [];
-    const primarySongs = allSongsTyped.filter(song => assertCategory(song.category) === primaryCategory);
+    let resultSongs: typeof allSongs = [];
+    const primarySongs = allSongs.filter(song => song.category === primaryCategory);
     resultSongs.push(...primarySongs);
     for (const category of sortedCategories) {
       if (category !== primaryCategory && resultSongs.length < count) {
-        const categorySongs = allSongsTyped.filter(song => 
-          assertCategory(song.category) === category && 
+        const categorySongs = allSongs.filter(song => 
+          song.category === category && 
           !resultSongs.some(existing => existing.id === song.id)
         );
         resultSongs.push(...categorySongs);
       }
     }
     if (resultSongs.length < count) {
-      const remainingSongs = allSongsTyped.filter(song => 
+      const remainingSongs = allSongs.filter(song => 
         !resultSongs.some(existing => existing.id === song.id)
       );
       resultSongs.push(...remainingSongs);
     }
-
-    // Shuffle
+    // Shuffle and limit only if needed
     const shuffled = resultSongs.sort(() => 0.5 - Math.random());
+    // Remove slice/count limitation - return all
     const result = shuffled.map(transformDatabaseSongToSong);
     return result;
   } catch (error) {
@@ -99,6 +74,7 @@ export const getRecommendedSongs = async (
   }
 };
 
+// Transform database song to application song format
 const transformDatabaseSongToSong = (dbSong: DatabaseSong): Song => {
   return {
     id: dbSong.id,
@@ -106,11 +82,12 @@ const transformDatabaseSongToSong = (dbSong: DatabaseSong): Song => {
     artist: dbSong.artist,
     album: dbSong.album,
     releaseDate: dbSong.release_date,
-    language: assertLanguage(dbSong.language),
-    category: assertCategory(dbSong.category),
+    language: dbSong.language,
+    category: dbSong.category,
     coverImage: dbSong.cover_image || '/placeholder.svg',
     duration: dbSong.duration,
     spotifyUrl: dbSong.spotify_url || undefined,
+    similarSongs: [],
     tags: dbSong.tags || [],
     description: dbSong.description || ''
   };
