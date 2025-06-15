@@ -1,138 +1,224 @@
-import React, { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+
+import React, { useState, useEffect } from "react";
 import { Song } from "@/utils/fuzzyLogic";
-import { getSongsByCategory } from "@/services/songService";
+import { getSimilarSongs } from "@/services/songService";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { CalendarIcon, Clock, Music, Play, X } from "lucide-react";
 
 interface SongDetailProps {
   song: Song | null;
-  open: boolean;
+  isOpen: boolean;
   onClose: () => void;
+  onSelectSimilar: (song: Song) => void;
 }
-const CATEGORIES: Song["category"][] = [
-  "energetic","upbeat","moderate","relaxed","calm"
-];
 
-const SongDetail: React.FC<SongDetailProps> = ({ song, open, onClose }) => {
-  // "Songs by this Artist" now powered by real database
-  const [artistSongs, setArtistSongs] = useState<Song[]>([]);
-  const [loading, setLoading] = useState(false);
+const SongDetail: React.FC<SongDetailProps> = ({
+  song,
+  isOpen,
+  onClose,
+  onSelectSimilar,
+}) => {
+  const [similarSongs, setSimilarSongs] = useState<Song[]>([]);
+  const [isLoadingSimilar, setIsLoadingSimilar] = useState(false);
 
+  // Fetch similar songs when song changes
   useEffect(() => {
-    if (song && open) {
-      setLoading(true);
-      (async () => {
-        let all: Song[] = [];
-        for (let cat of CATEGORIES) {
-          const data = await getSongsByCategory(cat, undefined);
-          all.push(...data);
-        }
-        const filtered = all
-          .filter(s => s.artist.toLowerCase() === song.artist.toLowerCase())
-          .filter(s => s.id !== song.id);
-        setArtistSongs(filtered);
-        setLoading(false);
-      })();
-    } else {
-      setArtistSongs([]);
+    const fetchSimilarSongs = async () => {
+      if (!song) {
+        setSimilarSongs([]);
+        return;
+      }
+
+      setIsLoadingSimilar(true);
+      try {
+        const similar = await getSimilarSongs(song.id, 3);
+        setSimilarSongs(similar);
+      } catch (error) {
+        console.error('Error fetching similar songs:', error);
+        setSimilarSongs([]);
+      } finally {
+        setIsLoadingSimilar(false);
+      }
+    };
+
+    if (isOpen && song) {
+      fetchSimilarSongs();
     }
-  }, [song, open]);
+  }, [song, isOpen]);
 
   if (!song) return null;
+  
+  // Function to open Spotify app with the song
+  const openInSpotify = (url: string) => {
+    // Extract the Spotify track ID from the URL
+    const spotifyIdMatch = url.match(/track\/([a-zA-Z0-9]+)/);
+    const spotifyId = spotifyIdMatch ? spotifyIdMatch[1] : null;
+    
+    if (spotifyId) {
+      // Create a Spotify URI that will open in the app
+      const spotifyUri = `spotify:track:${spotifyId}`;
+      
+      // Try to open the Spotify app first
+      window.location.href = spotifyUri;
+      
+      // Fallback to the web URL after a short delay (in case app is not installed)
+      setTimeout(() => {
+        // Check if we're still on the same page (app didn't open)
+        window.open(url, "_blank");
+      }, 1000);
+    } else {
+      // If we can't extract the ID, just open the URL in browser
+      window.open(url, "_blank");
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={val => !val && onClose()}>
-      <DialogContent className="max-w-md w-[98vw] p-0 bg-background shadow-2xl rounded-t-3xl rounded-b-lg border-0 mobile-modal-dc relative">
-        <DialogTitle className="sr-only">{song.title} by {song.artist}</DialogTitle>
-        <DialogDescription className="sr-only">{song.album}, {song.releaseDate}</DialogDescription>
-        {/* Single close button */}
-        <button
-          type="button"
-          aria-label="Close"
-          className="absolute z-10 top-3 right-3 bg-black/60 text-white rounded-full hover:bg-black/90 p-2"
-          onClick={onClose}
-        >
-          <X className="h-6 w-6" />
-        </button>
-        {/* Top Cover Image Section */}
-        <div className="relative w-full h-40 sm:h-48 rounded-t-3xl overflow-hidden flex items-end justify-start bg-gray-100">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-3xl p-0 gap-0 rounded-xl overflow-hidden border-0 shadow-xl">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-black/30 z-10" />
           <img
             src={song.coverImage}
-            alt={song.title}
-            className="object-cover w-full h-full"
+            alt={`${song.title} by ${song.artist}`}
+            className="w-full h-64 object-cover object-center"
           />
-          <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/75 via-black/10 to-transparent px-5 pt-8 pb-4 text-white rounded-t-3xl">
-            <div className="font-bold text-xl md:text-2xl mb-1 break-words leading-tight drop-shadow">{song.title}</div>
-            <div className="text-sm font-medium text-gray-200 drop-shadow">{song.artist}</div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="absolute top-4 right-4 z-20 bg-black/20 backdrop-blur-md hover:bg-black/40 text-white rounded-full"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+          <div className="absolute bottom-0 left-0 p-6 z-20">
+            <h2 className="text-white text-3xl font-bold mb-1">{song.title}</h2>
+            <p className="text-white/80 text-xl">{song.artist}</p>
           </div>
         </div>
-        {/* Details Section */}
-        <div className="bg-white rounded-b-lg px-5 py-5">
-          {/* Song Details Title */}
-          <div className="font-semibold flex items-center gap-2 mb-3 text-lg text-gray-800">
-            <span className="inline-block"><svg fill="none" stroke="currentColor" strokeWidth="2" width="22" height="22" viewBox="0 0 24 24" className="inline-block"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg></span>
-            Song Details
-          </div>
-          <div className="flex flex-col gap-2 text-[15px] text-gray-600">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Album</span>
-              <span className="font-medium text-gray-800">{song.album}</span>
+
+        <ScrollArea className="p-6 max-h-[60vh]">
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Music className="h-5 w-5 text-primary" />
+                <DialogTitle className="text-xl">Song Details</DialogTitle>
+              </div>
+
+              <div className="grid grid-cols-2 gap-y-3">
+                <div className="text-sm text-muted-foreground">Album</div>
+                <div className="text-sm font-medium">{song.album}</div>
+
+                <div className="text-sm text-muted-foreground">Duration</div>
+                <div className="text-sm font-medium flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  {song.duration}
+                </div>
+
+                <div className="text-sm text-muted-foreground">Release Date</div>
+                <div className="text-sm font-medium flex items-center gap-1">
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  {song.releaseDate}
+                </div>
+
+                <div className="text-sm text-muted-foreground">Language</div>
+                <div className="text-sm font-medium capitalize">{song.language}</div>
+
+                <div className="text-sm text-muted-foreground">Category</div>
+                <div className="text-sm font-medium capitalize">{song.category}</div>
+              </div>
+
+              <div>
+                <h4 className="font-medium mb-2">Tags</h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {song.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="capitalize">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {song.spotifyUrl && (
+                <Button
+                  className="w-full mt-4 bg-[#1DB954] hover:bg-[#1DB954]/90 text-white gap-2"
+                  onClick={() => openInSpotify(song.spotifyUrl!)}
+                >
+                  <Play className="h-4 w-4" fill="white" />
+                  Play on Spotify
+                </Button>
+              )}
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Duration</span>
-              <span className="flex items-center gap-2">
-                <svg className="inline-block" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                {song.duration}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Release Date</span>
-              <span className="flex items-center gap-2">
-                <svg className="inline-block" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
-                {song.releaseDate}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Language</span>
-              <span>{song.language}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Category</span>
-              <span className="capitalize">{song.category}</span>
-            </div>
-          </div>
-          {song.description && (
-            <p className="mt-4 text-gray-700 text-[15px] leading-[1.6]">{song.description}</p>
-          )}
-        </div>
-        {/* Songs by this artist */}
-        <div className="bg-white rounded-b-lg px-5 pb-6">
-          <div className="font-semibold text-md mt-6 mb-2 text-primary">
-            {loading ? "Loading more by this artist..." : "More by this artist"}
-          </div>
-          {(!loading && artistSongs.length === 0) && (
-            <div className="text-gray-400 text-sm">No other songs found.</div>
-          )}
-          {(artistSongs.length > 0) &&
-            <ul className="divide-y divide-gray-100">
-              {artistSongs.map(track => (
-                <li key={track.id} className="flex items-center gap-3 py-2">
-                  <img src={track.coverImage} alt={track.title} className="w-9 h-9 object-cover rounded shadow" />
-                  <div>
-                    <div className="font-medium text-[15px] text-gray-700 truncate">{track.title}</div>
-                    <div className="text-xs text-gray-500 truncate">{track.album}</div>
+
+            <div className="space-y-4">
+              <DialogDescription className="text-foreground">
+                {song.description}
+              </DialogDescription>
+
+              <div className="mt-6">
+                <h4 className="font-medium mb-3">Similar Songs</h4>
+                {isLoadingSimilar ? (
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="animate-pulse flex items-center gap-3 p-2">
+                        <div className="w-12 h-12 rounded-md bg-gray-200"></div>
+                        <div className="flex-1">
+                          <div className="h-4 bg-gray-200 rounded mb-1"></div>
+                          <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </li>
-              ))}
-            </ul>
-          }
-        </div>
-        <style>{`
-        @media (max-width: 640px) {
-          .mobile-modal-dc { padding: 0 !important; max-width: 99vw !important; }
-        }
-        `}</style>
+                ) : similarSongs.length > 0 ? (
+                  <div className="space-y-3">
+                    {similarSongs.map((similar) => (
+                      <div
+                        key={similar.id}
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                        onClick={() => onSelectSimilar(similar)}
+                      >
+                        <img
+                          src={similar.coverImage}
+                          alt={similar.title}
+                          className="w-12 h-12 rounded-md object-cover"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h5 className="font-medium truncate">{similar.title}</h5>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {similar.artist}
+                          </p>
+                        </div>
+                        {similar.spotifyUrl && (
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="rounded-full"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openInSpotify(similar.spotifyUrl!);
+                            }}
+                          >
+                            <Play className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No similar songs found.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </ScrollArea>
+
+        <DialogFooter className="bg-muted/30 p-4">
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

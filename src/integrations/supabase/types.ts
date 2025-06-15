@@ -56,7 +56,6 @@ export type Database = {
           duration: string
           id: string
           language: string
-          lyric_snippet: string | null
           release_date: string
           spotify_url: string | null
           tags: string[] | null
@@ -73,7 +72,6 @@ export type Database = {
           duration: string
           id: string
           language: string
-          lyric_snippet?: string | null
           release_date: string
           spotify_url?: string | null
           tags?: string[] | null
@@ -90,7 +88,6 @@ export type Database = {
           duration?: string
           id?: string
           language?: string
-          lyric_snippet?: string | null
           release_date?: string
           spotify_url?: string | null
           tags?: string[] | null

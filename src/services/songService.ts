@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Song, SongCategoryType } from '@/utils/fuzzyLogic';
 
@@ -18,43 +19,72 @@ export interface DatabaseSong {
   updated_at: string;
 }
 
-const VALID_LANGUAGES = ['English', 'Hindi'] as const;
-const VALID_CATEGORIES = [
-  'upbeat', 'party', 'uplifting', 'motivational', 'calm', 'relaxing', 'romantic',
-  'nostalgic', 'happy', 'melancholic', 'study', 'sad'
-] as const;
-
+// Get recommended songs based on multiple categories and membership values
 export const getRecommendedSongs = async (
   primaryCategory: SongCategoryType,
   memberships: Record<SongCategoryType, number>,
-  count: number = 1000,
+  count: number = 20,
   includeEnglish: boolean = true,
   includeHindi: boolean = true
-) => {
+): Promise<Song[]> => {
   try {
+    console.log('Getting recommended songs:', {
+      primaryCategory,
+      memberships,
+      count,
+      includeEnglish,
+      includeHindi
+    });
+
     let languages: ('English' | 'Hindi')[] = [];
     if (includeEnglish) languages.push('English');
     if (includeHindi) languages.push('Hindi');
-    if (!languages.length) return [];
 
+    if (languages.length === 0) {
+      console.log('No languages selected');
+      return [];
+    }
+
+    // Build query with language filter
     let query = supabase
       .from('songs')
       .select('*');
+
     if (languages.length === 1) {
       query = query.eq('language', languages[0]);
     } else if (languages.length === 2) {
       query = query.in('language', languages);
     }
-    const { data: allSongs, error } = await query;
-    if (error || !allSongs?.length) return [];
 
+    const { data: allSongs, error } = await query;
+
+    if (error) {
+      console.error('Error fetching songs:', error);
+      throw error;
+    }
+
+    if (!allSongs || allSongs.length === 0) {
+      console.log('No songs found in database');
+      return [];
+    }
+
+    console.log('Total songs available:', allSongs.length);
+
+    // Sort categories by membership values (highest preference first)
     const sortedCategories = Object.entries(memberships)
       .sort((a, b) => b[1] - a[1])
-      .map(([cat]) => cat[0] as SongCategoryType);
+      .map(([cat]) => cat as SongCategoryType);
+
+    console.log('Categories sorted by preference:', sortedCategories);
 
     let resultSongs: typeof allSongs = [];
+
+    // First, add songs from primary category
     const primarySongs = allSongs.filter(song => song.category === primaryCategory);
     resultSongs.push(...primarySongs);
+    console.log(`Added ${primarySongs.length} songs from primary category: ${primaryCategory}`);
+
+    // Then add from other categories in order of preference
     for (const category of sortedCategories) {
       if (category !== primaryCategory && resultSongs.length < count) {
         const categorySongs = allSongs.filter(song => 
@@ -62,38 +92,41 @@ export const getRecommendedSongs = async (
           !resultSongs.some(existing => existing.id === song.id)
         );
         resultSongs.push(...categorySongs);
+        console.log(`Added ${categorySongs.length} songs from category: ${category}`);
       }
     }
+
+    // If we still don't have enough songs, add remaining songs
     if (resultSongs.length < count) {
       const remainingSongs = allSongs.filter(song => 
         !resultSongs.some(existing => existing.id === song.id)
       );
       resultSongs.push(...remainingSongs);
+      console.log(`Added ${remainingSongs.length} remaining songs`);
     }
-    // Shuffle and limit only if needed
+
+    // Shuffle and limit results
     const shuffled = resultSongs.sort(() => 0.5 - Math.random());
-    // Remove slice/count limitation - return all
-    const result = shuffled.map(transformDatabaseSongToSong);
+    const result = shuffled.slice(0, count).map(transformDatabaseSongToSong);
+    
+    console.log('Final recommended songs:', result.length);
     return result;
   } catch (error) {
+    console.error('Error in getRecommendedSongs:', error);
     return [];
   }
 };
 
 // Transform database song to application song format
-const transformDatabaseSongToSong = (dbSong: any): Song => {
-  // Force types to union type or use fallback
-  let language: 'English' | 'Hindi' = VALID_LANGUAGES.includes(dbSong.language) ? dbSong.language : 'English';
-  let category: SongCategoryType = VALID_CATEGORIES.includes(dbSong.category) ? dbSong.category : 'upbeat';
-
+const transformDatabaseSongToSong = (dbSong: DatabaseSong): Song => {
   return {
     id: dbSong.id,
     title: dbSong.title,
     artist: dbSong.artist,
     album: dbSong.album,
     releaseDate: dbSong.release_date,
-    language,
-    category,
+    language: dbSong.language,
+    category: dbSong.category,
     coverImage: dbSong.cover_image || '/placeholder.svg',
     duration: dbSong.duration,
     spotifyUrl: dbSong.spotify_url || undefined,
@@ -103,6 +136,7 @@ const transformDatabaseSongToSong = (dbSong: any): Song => {
   };
 };
 
+// Get songs by category and language
 export const getSongsByCategory = async (
   category: SongCategoryType, 
   language?: 'English' | 'Hindi'
@@ -134,6 +168,7 @@ export const getSongsByCategory = async (
   }
 };
 
+// Get similar songs for a given song ID
 export const getSimilarSongs = async (songId: string, limit: number = 3): Promise<Song[]> => {
   try {
     console.log('Fetching similar songs for:', songId);
@@ -154,7 +189,7 @@ export const getSimilarSongs = async (songId: string, limit: number = 3): Promis
       return [];
     }
 
-    const similarSongIds = similarities.map((s: any) => s.similar_song_id).filter(Boolean);
+    const similarSongIds = similarities.map(s => s.similar_song_id).filter(Boolean);
     
     if (similarSongIds.length === 0) {
       return [];
@@ -178,6 +213,7 @@ export const getSimilarSongs = async (songId: string, limit: number = 3): Promis
   }
 };
 
+// Check if database has songs
 export const isDatabasePopulated = async (): Promise<boolean> => {
   try {
     console.log('Checking if database has songs...');
@@ -200,6 +236,7 @@ export const isDatabasePopulated = async (): Promise<boolean> => {
   }
 };
 
+// Get random songs by category
 export const getRandomSongsByCategory = async (
   category: SongCategoryType, 
   count: number = 3, 
@@ -217,13 +254,14 @@ export const getRandomSongsByCategory = async (
       query = query.eq('language', language);
     }
 
-    const { data, error } = await query.limit(count * 2);
+    const { data, error } = await query.limit(count * 2); // Get more to shuffle
 
     if (error) {
       console.error('Error fetching random songs:', error);
       throw error;
     }
 
+    // Shuffle the results
     const shuffled = data?.sort(() => 0.5 - Math.random()) || [];
     const result = shuffled.slice(0, count).map(transformDatabaseSongToSong);
     console.log('Random songs fetched:', result.length);
