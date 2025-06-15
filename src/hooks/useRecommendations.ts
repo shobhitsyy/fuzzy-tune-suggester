@@ -28,8 +28,9 @@ export function useRecommendations({
         includeHindi,
         maxSongs
       );
+      console.log("HOOK RESULT getRecommendations()", { songs, songsLength: songs.length }); // For debug
       setRecommendations(songs);
-      if (!songs.length) setError("No recommendations found. Try adjusting your mood or language.");
+      if (!songs.length) setError("No recommendations found. Try adjusting your mood or language or add songs to your database.");
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Failed to get recommendations"
