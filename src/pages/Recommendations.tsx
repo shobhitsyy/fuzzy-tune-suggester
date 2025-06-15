@@ -6,9 +6,9 @@ import { ArrowLeft } from 'lucide-react';
 import { MoodParams, determineSongCategory, Song } from '@/utils/fuzzyLogic';
 import { getRecommendedSongs } from '@/services/songService';
 import { useToast } from '@/hooks/use-toast';
-import RecommendationGrid from '@/components/RecommendationGrid';
 import RecommendationSkeletonGrid from '@/components/RecommendationSkeletonGrid';
 import RecommendationEmptyState from '@/components/RecommendationEmptyState';
+import SongCard from "@/components/SongCard";
 
 const Recommendations = () => {
   const location = useLocation();
@@ -19,7 +19,6 @@ const Recommendations = () => {
   
   const [recommendedSongs, setRecommendedSongs] = useState<Song[]>([]);
   const [shownCount, setShownCount] = useState(50);
-  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -85,7 +84,6 @@ const Recommendations = () => {
     // eslint-disable-next-line
   }, [moodParams, includeEnglish, includeHindi, navigate, shownCount, toast, maxSongs]);
 
-  const handleSongSelect = (song: Song) => setSelectedSong(song);
   const handleBackToHome = () => navigate('/');
 
   const handleShowMore = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -141,10 +139,12 @@ const Recommendations = () => {
           <RecommendationSkeletonGrid />
         ) : recommendedSongs.length > 0 ? (
           <>
-            <RecommendationGrid
-              recommendedSongs={recommendedSongs.slice(0, shownCount)}
-              onSongSelect={handleSongSelect}
-            />
+            {/* Use SongCard directly, not advanced grid: restore previous style */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {recommendedSongs.slice(0, shownCount).map((song) => (
+                <SongCard key={song.id} song={song} />
+              ))}
+            </div>
             <div className="text-center mt-8">
               <p className="text-gray-600">
                 Found {recommendedSongs.length} songs matching your mood
@@ -163,17 +163,8 @@ const Recommendations = () => {
             onBack={handleBackToHome}
           />
         )}
-        {selectedSong && (
-          <SongDetail
-            song={selectedSong}
-            isOpen={!!selectedSong}
-            onClose={() => setSelectedSong(null)}
-            onSelectSimilar={handleSongSelect}
-          />
-        )}
       </div>
     </div>
   );
 };
-
 export default Recommendations;

@@ -1,4 +1,3 @@
-
 // Types for our fuzzy input parameters
 export interface MoodParams {
   heartRate: number; // 0-100 (beats per minute normalized)
@@ -38,27 +37,49 @@ export interface Song {
   coverImage: string;
   duration: string;
   spotifyUrl?: string;
-  similarSongs?: string[];
   tags: string[];
   description: string;
 }
 
 // Helper function to calculate membership values
-export const calculateMembership = (heartRate: number, activity: number, mood: number) => {
+export const calculateMembership = (
+  heartRate: number,
+  activity: number,
+  mood: number
+) => {
+  // Make "sad" (low mood) really push towards calm/relaxed, not moderate
   const params: MoodParams = {
     heartRate,
     timeOfDay: new Date().getHours(),
     activity,
-    mood
+    mood,
   };
 
-  return {
+  const base = {
     calm: calmMembership(params),
     relaxed: relaxedMembership(params),
     moderate: moderateMembership(params),
     upbeat: upbeatMembership(params),
-    energetic: energeticMembership(params)
+    energetic: energeticMembership(params),
   };
+  // Adjust for sadness (mood<=3), avoid moderate for low mood
+  if (mood <= 3) {
+    base.calm += 0.5;
+    base.relaxed += 0.25;
+    base.moderate -= 0.7;
+    base.upbeat -= 0.5;
+    base.energetic -= 0.4;
+  }
+  // If high energy/activity, upweight upbeat/energetic strongly
+  if (activity >= 8 || heartRate >= 90) {
+    base.energetic += 0.5;
+    base.upbeat += 0.4;
+    base.calm -= 0.3;
+    base.moderate -= 0.3;
+  }
+  // Never let "moderate" dominate for extreme mood/activity
+  if (Math.abs(mood - 5) > 3) base.moderate -= 0.3;
+  return base;
 };
 
 // New function to calculate mood memberships from MoodInputs
