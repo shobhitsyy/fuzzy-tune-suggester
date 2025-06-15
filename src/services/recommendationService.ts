@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { calculateMoodMemberships, SongCategoryType, MoodInputs } from "@/utils/fuzzyLogic";
 
 export interface MoodParams {
   energy: number;  // 1-10
@@ -19,21 +20,22 @@ export interface SongRecommendation {
   release_date?: string;
 }
 
-function getRobustMoodCategories(moodParams: MoodParams): string[] {
-  const categories = [];
-  if (moodParams.energy <= 3) categories.push('calm', 'relaxed', 'mellow');
-  else if (moodParams.energy <= 7) categories.push('moderate', 'chill');
-  else categories.push('energetic', 'upbeat', 'fun');
+// Helper to ensure language filter
+function _getLanguageFilter(eng: boolean, hin: boolean): string[] {
+  const lang: string[] = [];
+  if (eng) lang.push('English');
+  if (hin) lang.push('Hindi');
+  return lang;
+}
 
-  if (moodParams.mood <= 3) categories.push('calm', 'relaxed', 'sad', 'emotional');
-  else if (moodParams.mood <= 7) categories.push('moderate', 'mellow', 'classic');
-  else categories.push('upbeat', 'energetic', 'happy', 'fun');
-
-  if (moodParams.focus <= 3) categories.push('calm', 'relaxed', 'chill', 'mellow');
-  else if (moodParams.focus <= 7) categories.push('moderate', 'classic');
-  else categories.push('energetic', 'upbeat', 'epic', 'motivational');
-
-  return [...new Set(categories.map(x => x.toLowerCase()))].slice(0, 7);
+// Get unique songs by ID
+function getUniqueSongsById(songs: any[]): any[] {
+  const seen: Record<string, boolean> = {};
+  return songs.filter((song) => {
+    if (seen[song.id]) return false;
+    seen[song.id] = true;
+    return true;
+  });
 }
 
 export class RecommendationService {
@@ -43,79 +45,89 @@ export class RecommendationService {
     includeHindi: boolean,
     maxSongs: number = 20
   ): Promise<SongRecommendation[]> {
-    const categories = getRobustMoodCategories(moodParams);
-    let languageFilter: string[] = [];
-    if (includeEnglish) languageFilter.push('English');
-    if (includeHindi) languageFilter.push('Hindi');
+    // Use fuzzy logic to get membership scores for each category
+    const memberships: Record<SongCategoryType, number> = calculateMoodMemberships({
+      energy: moodParams.energy,
+      mood: moodParams.mood,
+      focus: moodParams.focus,
+    });
+
+    // Sort categories by their scores (descending)
+    const sortedCategories = Object.entries(memberships)
+      .sort((a, b) => b[1] - a[1])
+      .map(([cat]) => cat as SongCategoryType);
+
+    const languageFilter = _getLanguageFilter(includeEnglish, includeHindi);
     if (languageFilter.length === 0) throw new Error('No language selected');
-    
-    // 1. Try to match language + category
-    let { data: songs, error } = await supabase
-      .from('songs')
-      .select('id,title,artist,category,language,cover_image,album,duration,release_date')
-      .in('language', languageFilter)
-      .in('category', categories)
-      .limit(maxSongs);
 
-    console.log("Step 1. language+category", { categories, languageFilter, found: songs?.length });
+    let foundSongs: SongRecommendation[] = [];
+    let queriedIds: Set<string> = new Set();
 
-    if (error) throw error;
-    if (songs && songs.length >= maxSongs) return songs as SongRecommendation[];
-
-    // 2. Fallback: match any language in filter, not in initial result
-    let gotIds = (songs || []).map(s => s.id);
-    const { data: fallbackSongs } = await supabase
-      .from('songs')
-      .select('id,title,artist,category,language,cover_image,album,duration,release_date')
-      .in('language', languageFilter)
-      .not('id', 'in', gotIds)
-      .order('RANDOM()')
-      .limit(maxSongs - (songs?.length || 0));
-
-    console.log("Step 2. fallback language", { found: fallbackSongs?.length });
-
-    if (fallbackSongs && fallbackSongs.length > 0) songs = songs.concat(fallbackSongs);
-
-    if (songs && songs.length >= maxSongs) return songs.slice(0, maxSongs);
-
-    // 3. Fallback: fill with completely random songs not yet included
-    gotIds = (songs || []).map(s => s.id);
-    const { data: extraFallback } = await supabase
-      .from('songs')
-      .select('id,title,artist,category,language,cover_image,album,duration,release_date')
-      .not('id', 'in', gotIds)
-      .order('RANDOM()')
-      .limit(maxSongs - (songs?.length || 0));
-
-    console.log("Step 3. extra fallback any song", { found: extraFallback?.length });
-
-    if (extraFallback && extraFallback.length > 0) songs = songs.concat(extraFallback);
-
-    // FINAL: If still none, just get any song at all (unfiltered, covers the case of very empty DB)
-    if (!songs || songs.length === 0) {
-      const { data: anySongs, error: anyError } = await supabase
+    // Try to fetch songs from matching categories, ordered by importance
+    for (const category of sortedCategories) {
+      const { data, error } = await supabase
         .from('songs')
         .select('id,title,artist,category,language,cover_image,album,duration,release_date')
+        .in('language', languageFilter)
+        .eq('category', category)
         .order('RANDOM()')
         .limit(maxSongs);
 
-      console.log("Step 4. ABSOLUTE fallback any", { found: anySongs?.length });
-
-      if (anySongs && anySongs.length > 0) {
-        songs = anySongs;
-      } else {
-        // If really, really empty DB; will return empty still.
-        return [];
+      if (error) continue;
+      if (data && data.length > 0) {
+        for (const s of data) {
+          if (!queriedIds.has(s.id)) {
+            foundSongs.push(s as SongRecommendation);
+            queriedIds.add(s.id);
+            if (foundSongs.length === maxSongs) return foundSongs;
+          }
+        }
       }
-      if (anyError) throw anyError;
+      if (foundSongs.length >= maxSongs) break;
     }
 
-    // Final deduplication (avoid duplicates if multiple sources)
-    const unique: { [id: string]: SongRecommendation } = {};
-    (songs || []).forEach((song: any) => {
-      unique[song.id] = song as SongRecommendation;
-    });
-    return Object.values(unique).slice(0, maxSongs);
+    // Fallback: pull more from language, ignoring category
+    if (foundSongs.length < maxSongs) {
+      const { data: fallbackLang, error: err2 } = await supabase
+        .from('songs')
+        .select('id,title,artist,category,language,cover_image,album,duration,release_date')
+        .in('language', languageFilter)
+        .not('id', 'in', [...queriedIds])
+        .order('RANDOM()')
+        .limit(maxSongs - foundSongs.length);
+      if (!err2 && fallbackLang) {
+        for (const song of fallbackLang) {
+          if (!queriedIds.has(song.id)) {
+            foundSongs.push(song as SongRecommendation);
+            queriedIds.add(song.id);
+            if (foundSongs.length === maxSongs) break;
+          }
+        }
+      }
+    }
+
+    // Fallback: pull more random songs from the DB, disregard language/category
+    if (foundSongs.length < maxSongs) {
+      const { data: anySongs, error: err3 } = await supabase
+        .from('songs')
+        .select('id,title,artist,category,language,cover_image,album,duration,release_date')
+        .not('id', 'in', [...queriedIds])
+        .order('RANDOM()')
+        .limit(maxSongs - foundSongs.length);
+
+      if (!err3 && anySongs) {
+        for (const song of anySongs) {
+          if (!queriedIds.has(song.id)) {
+            foundSongs.push(song as SongRecommendation);
+            queriedIds.add(song.id);
+            if (foundSongs.length === maxSongs) break;
+          }
+        }
+      }
+    }
+
+    // Final deduplication/slicing (just in case!)
+    return foundSongs.slice(0, maxSongs);
   }
 
   static async getSimilarSongs(
