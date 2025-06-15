@@ -52,7 +52,6 @@ async function fetchSpotifyTracks(accessToken: string, options: { limit?: number
 }
 
 async function generateCatchyDescriptionGemini(track: any) {
-  // Compose a rich prompt
   const prompt = `Write a catchy, creative, but concise (max 25 words) description for the song "${track.name}" by ${track.artists[0]?.name}, from the album "${track.album.name}". Mention its vibe, mood, or what makes it stand out. Do not just restate the title or artist.`;
 
   const body = {
@@ -71,7 +70,6 @@ async function generateCatchyDescriptionGemini(track: any) {
 
   if (!resp.ok) {
     console.error("Gemini API failed:", await resp.text());
-    // Fallback: basic description
     return `${track.name} by ${track.artists[0]?.name} - a vibrant hit.`;
   }
   const result = await resp.json();
@@ -96,28 +94,47 @@ async function upsertSong(song: any) {
   song.updated_at = new Date().toISOString();
   song.tags = song.tags ?? [song.category];
 
+  // Only pick SONG TABLE fields
+  const dbSong = {
+    id: song.id,
+    title: song.title,
+    artist: song.artist,
+    album: song.album,
+    release_date: song.release_date,
+    language: song.language,
+    category: song.category,
+    cover_image: song.cover_image,
+    duration: song.duration,
+    spotify_url: song.spotify_url,
+    tags: song.tags,
+    description: song.description,
+    lyric_snippet: song.lyric_snippet ?? null,
+    created_at: song.created_at,
+    updated_at: song.updated_at,
+  };
+
   if (existingSong && existingSong.id) {
-    // Update only (preserve created_at)
+    // Update (preserve created_at)
     const { error } = await supabase
       .from("songs")
-      .update(song)
+      .update(dbSong)
       .eq("id", existingSong.id);
     if (error) {
       console.error("Update failed for song:", song.title, error);
     }
     return { updated: true, id: existingSong.id };
   } else {
-    // Insert
-    song.id = `${song.language.substring(0,2).toLowerCase()}-${song.category.toLowerCase()}-${Date.now()}`;
-    song.created_at = new Date().toISOString();
+    // Generate id as before (if not already set)
+    dbSong.id = song.id || `${song.language.substring(0,2).toLowerCase()}-${song.category.toLowerCase()}-${Date.now()}`;
+    dbSong.created_at = new Date().toISOString();
 
     const { error } = await supabase
       .from("songs")
-      .insert(song);
+      .insert(dbSong);
     if (error) {
       console.error("Insert failed for song:", song.title, error);
     }
-    return { inserted: true, id: song.id };
+    return { inserted: true, id: dbSong.id };
   }
 }
 
@@ -127,7 +144,6 @@ serve(async (req: Request) => {
   }
 
   try {
-    // (Optionally) accept options from JSON body, e.g., { limit: 10, market: "IN", q: "pop" }
     const { q, limit, market } = (await req.json().catch(() => ({}))) || {};
 
     const accessToken = await getSpotifyAccessToken();
@@ -135,7 +151,7 @@ serve(async (req: Request) => {
 
     const results: any[] = [];
     for (const track of tracks) {
-      // Compose song object
+      // Map track to match songs table structure
       const language = (market?.toUpperCase() === "IN") ? "Hindi" : "English";
       const songObj = {
         title: track.name,
@@ -143,7 +159,7 @@ serve(async (req: Request) => {
         album: track.album?.name || "Unknown Album",
         release_date: track.album?.release_date || "2023-01-01",
         language,
-        category: "moderate", // Default; could use track features/predictions
+        category: "moderate", // Default
         cover_image: track.album?.images?.[0]?.url ?? null,
         duration: `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000)/1000)).padStart(2, "0")}`,
         spotify_url: track.external_urls?.spotify || null,
@@ -151,10 +167,13 @@ serve(async (req: Request) => {
         description: "",
       };
 
-      // Get catchy description from Gemini
+      // Generate short description
       songObj.description = await generateCatchyDescriptionGemini(track);
 
-      // Upsert (insert/update) into Supabase
+      // Add lyric_snippet as null for now
+      songObj.lyric_snippet = null;
+
+      // upsert using correct table columns only
       const upsertRes = await upsertSong(songObj);
       results.push({ ...upsertRes, title: songObj.title });
     }
@@ -176,3 +195,4 @@ serve(async (req: Request) => {
     });
   }
 });
+
