@@ -1,13 +1,13 @@
-import SeedSongs from "./SeedSongs";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Music, Heart, Zap } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { spotifyDatabaseService } from "@/services/spotifyDatabaseService";
 import { supabase } from "@/integrations/supabase/client";
 import EnhancedMoodSelector from "@/components/EnhancedMoodSelector";
+import SeedSongs from "./SeedSongs";
 
 const Index = () => {
   const [moodInputs, setMoodInputs] = useState({
@@ -32,10 +32,8 @@ const Index = () => {
 
         if (!error) {
           setDbStats({ count: count || 0, loading: false });
-          console.log('Current database song count:', count);
         }
       } catch (error) {
-        console.error('Error checking database stats:', error);
         setDbStats({ count: 0, loading: false });
       }
     };
@@ -46,11 +44,9 @@ const Index = () => {
   const handlePopulateSongs = async () => {
     setIsPopulating(true);
     try {
-      console.log('Starting song population...');
       localStorage.removeItem('songsPopulated');
 
       const results = await spotifyDatabaseService.addCuratedSongsToDatabase();
-      console.log('Song population results:', results);
 
       if (results?.added > 0) {
         toast({
@@ -71,7 +67,6 @@ const Index = () => {
         });
       }
     } catch (error) {
-      console.error('Failed to populate songs:', error);
       toast({
         title: "❌ Database Update Failed",
         description: "Failed to update music library. Check console for details.",
