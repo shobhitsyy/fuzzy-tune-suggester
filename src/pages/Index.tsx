@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Music, Heart, Zap } from "lucide-react";
+import { Sparkles, Music, Heart, Zap, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { spotifyDatabaseService } from "@/services/spotifyDatabaseService";
@@ -113,12 +114,20 @@ const Index = () => {
             <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
               Mood Melody
             </h1>
+            {/* Discovery Button */}
+            <Button
+              variant="secondary"
+              size="sm"
+              className="ml-3 flex items-center gap-1"
+              onClick={() => navigate("/discovery")}
+            >
+              <Search className="h-4 w-4" />
+              Discovery
+            </Button>
           </div>
-
           <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
             Discover music that perfectly matches your current vibe. Set your mood and let AI curate the perfect playlist for you.
           </p>
-          {/* Removed library stats and updating spinner */}
         </div>
 
         {/* Main Card */}
