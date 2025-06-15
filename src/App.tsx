@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,7 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Recommendations from "./pages/Recommendations";
-import AdminPage from "./pages/Admin";
 
 const queryClient = new QueryClient();
 
@@ -18,7 +18,6 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/recommendations" element={<Recommendations />} />
-          <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
