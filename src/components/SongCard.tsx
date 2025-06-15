@@ -4,9 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Song } from "@/utils/fuzzyLogic";
-import LyricSnippet from "@/components/LyricSnippet";
 import SongCardActions from "@/components/SongCardActions";
 import SongCardTags from "@/components/SongCardTags";
+import LyricSnippet from "@/components/LyricSnippet";
 
 interface SongCardProps {
   song: Song;
@@ -62,7 +62,8 @@ const SongCard: React.FC<SongCardProps> = ({ song, onClick }) => {
         <div className="space-y-0.5 sm:space-y-1">
           <h3 className="font-medium truncate text-xs sm:text-sm leading-tight text-gray-800">{song.title}</h3>
           <p className="text-xs text-gray-500 truncate">{song.artist}</p>
-          <LyricSnippet title={song.title} artist={song.artist} />
+          {/* Show lyric snippet from DB */}
+          <LyricSnippet lyricSnippet={song.lyric_snippet} />
           <div className="flex justify-between items-center">
             <span className="text-xs text-gray-400 capitalize">{song.language}</span>
             {song.spotifyUrl && (

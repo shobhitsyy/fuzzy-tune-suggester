@@ -1,40 +1,26 @@
 
-import React, { useEffect, useState } from "react";
-import { getLyricSnippet } from "@/api/getLyricSnippet";
+import React from "react";
 
+/**
+ * Shows a lyric snippet for the song.
+ * Props:
+ *   - lyricSnippet: string | null
+ */
 interface LyricSnippetProps {
-  title: string;
-  artist: string;
+  lyricSnippet: string | null | undefined;
 }
 
-const LyricSnippet: React.FC<LyricSnippetProps> = ({ title, artist }) => {
-  const [snippet, setSnippet] = useState<string | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    setSnippet(null);
-    getLyricSnippet(title, artist).then((res) => {
-      if (mounted) setSnippet(res);
-    });
-    return () => {
-      mounted = false;
-    }
-  }, [title, artist]);
-
-  if (snippet === null)
+const LyricSnippet: React.FC<LyricSnippetProps> = ({ lyricSnippet }) => {
+  if (!lyricSnippet || lyricSnippet.trim().length === 0) {
     return (
-      <span className="text-xs text-gray-400 italic animate-pulse">
-        fetching famous line...
+      <span className="text-xs text-gray-400 italic">
+        (No lyric snippet.)
       </span>
     );
-
-  return snippet ? (
-    <span className="text-xs text-gray-700 italic truncate block px-1 pt-0.5">
-      “{snippet}”
-    </span>
-  ) : (
-    <span className="text-xs text-gray-400 italic">
-      (No lyric found)
+  }
+  return (
+    <span className="text-xs text-gray-700 italic block px-1 pt-0.5">
+      “{lyricSnippet}”
     </span>
   );
 };
