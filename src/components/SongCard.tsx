@@ -1,9 +1,6 @@
+
 import React, { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Song } from "@/utils/fuzzyLogic";
-import SongCardActions from "@/components/SongCardActions";
 import SongCardTags from "@/components/SongCardTags";
 import SongDetail from "@/components/SongDetail";
 
@@ -34,21 +31,20 @@ const SongCard: React.FC<SongCardProps> = ({ song }) => {
           <h3 className="font-semibold text-base truncate">{song.title}</h3>
           <p className="text-xs text-gray-500 truncate">{song.artist}</p>
           <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-400 capitalize">{song.language}</span>
+            <span className="text-xs text-gray-400 capitalize">
+              {song.language}
+            </span>
             <span className="text-xs text-gray-400">{song.duration}</span>
           </div>
           <SongCardTags tags={song.tags} />
         </div>
       </div>
       {showDetails && (
-        <SongDetail
-          song={song}
-          isOpen={showDetails}
-          onClose={handleClose}
-        />
+        <SongDetail song={song} isOpen={showDetails} onClose={handleClose} />
       )}
     </>
   );
 };
 
 export default SongCard;
+

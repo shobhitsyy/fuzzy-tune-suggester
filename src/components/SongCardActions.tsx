@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Star } from "lucide-react";
 import { Song } from "@/utils/fuzzyLogic";
 
-// Simple localstorage rating logic
+// Localstorage rating logic
 const localKey = (songId: string) => `song-rating-${songId}`;
 
 const getStoredRating = (songId: string) => {
@@ -21,16 +21,9 @@ interface SongCardActionsProps {
 
 const SongCardActions: React.FC<SongCardActionsProps> = ({ song }) => {
   const [rating, setRating] = useState<number | null>(null);
-  const [avgRating, setAvgRating] = useState<number | null>(null);
-  const [ratingCount, setRatingCount] = useState<number>(0);
 
-  // Fake average rating for demo: this would be fetched from a backend in a real app
-  // Here, we'll generate a semi-random value based on id for demo purposes
   useEffect(() => {
     setRating(getStoredRating(song.id));
-    // For demo, mimic a fixed average: count 15, avg 4.1. In real app, fetch from API.
-    setAvgRating(4.1 + ((song.id.charCodeAt(0) % 10) / 16));
-    setRatingCount(15 + (song.id.charCodeAt(1) % 5));
   }, [song.id]);
 
   const handleRating = (star: number, e: React.MouseEvent) => {
@@ -38,9 +31,9 @@ const SongCardActions: React.FC<SongCardActionsProps> = ({ song }) => {
     if (rating !== null) return; // only once
     setStoredRating(song.id, star);
     setRating(star);
-    // In a real app, you would now send star to backend and refetch average.
   };
 
+  // No dummy reviews, just show user rating or prompt to rate
   return (
     <div className="flex gap-2 mt-2 items-center justify-center">
       <div className="flex gap-1 items-center">
@@ -62,9 +55,7 @@ const SongCardActions: React.FC<SongCardActionsProps> = ({ song }) => {
           />
         ))}
         <span className="ml-2 text-xs text-gray-600">
-          {avgRating !== null
-            ? `(${avgRating.toFixed(1)} stars • ${ratingCount})`
-            : "(No reviews)"}
+          {rating !== null ? `(You rated ${rating} stars)` : "(Rate this song!)"}
         </span>
       </div>
     </div>

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Song } from "@/utils/fuzzyLogic";
 import SongCardActions from "@/components/SongCardActions";
@@ -16,12 +17,13 @@ interface SpotifyTrack {
 
 const fetchSongsByArtist = async (artist: string, excludeTitle: string): Promise<SpotifyTrack[]> => {
   try {
+    const token = localStorage.getItem("spotify_client_token") || "";
+    if (!token) return [];
     const res = await fetch(
       `https://api.spotify.com/v1/search?q=artist:${encodeURIComponent(artist)}&type=track&limit=10`,
       {
         headers: {
-          // This assumes a valid Spotify CLIENT TOKEN is stored and available.
-          "Authorization": `Bearer ${localStorage.getItem("spotify_client_token") || ""}`,
+          "Authorization": `Bearer ${token}`,
         },
       }
     );
@@ -62,28 +64,30 @@ const SongDetail: React.FC<SongDetailProps> = ({
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-lg w-full max-w-lg shadow-xl p-0 overflow-auto relative">
+      <div className="bg-white rounded-lg w-full max-w-2xl md:max-w-3xl shadow-xl p-0 overflow-auto relative max-h-[95vh]">
         <button
-          className="absolute right-3 top-3 text-gray-400 hover:text-gray-700"
+          className="absolute right-3 top-3 text-gray-400 hover:text-gray-700 text-2xl"
           onClick={onClose}
         >
           <span className="sr-only">Close</span>
           ×
         </button>
-        <div className="p-4">
+        <div className="p-6 pb-2">
           <img
             src={song.coverImage}
             alt={song.title}
-            className="w-32 h-32 rounded-lg mx-auto mb-4 object-cover"
+            className="w-40 h-40 rounded-lg mx-auto mb-4 object-cover"
           />
           <h2 className="text-2xl font-bold text-center mb-1">{song.title}</h2>
           <p className="text-center text-gray-600 mb-1">{song.artist}</p>
+          <div className="text-sm text-center text-gray-400 mb-3">{song.album} • {song.releaseDate}</div>
           {song.description && (
             <p className="mb-4 text-gray-500 text-center">{song.description}</p>
           )}
-          <div className="flex justify-center mt-4">
+          <div className="flex justify-center mt-2 mb-1">
             <SongCardActions song={song} />
           </div>
+          {/* Songs by this Artist */}
           {otherSongs.length > 0 && (
             <div className="mt-6">
               <h3 className="text-lg font-semibold mb-2 text-center">
@@ -103,4 +107,5 @@ const SongDetail: React.FC<SongDetailProps> = ({
     </div>
   );
 };
+
 export default SongDetail;
