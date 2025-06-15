@@ -12,80 +12,13 @@ const Index = () => {
   const [moodInputs, setMoodInputs] = useState({
     energy: 5,
     mood: 5,
-    focus: 5
+    focus: 5,
   });
   const [includeEnglish, setIncludeEnglish] = useState(true);
   const [includeHindi, setIncludeHindi] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [isPopulating, setIsPopulating] = useState(false);
-  const [dbStats, setDbStats] = useState({ count: 0, loading: true });
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  // Check database stats
-  useEffect(() => {
-    const checkDatabaseStats = async () => {
-      try {
-        const { count, error } = await supabase
-          .from('songs')
-          .select('*', { count: 'exact', head: true });
-
-        if (!error) {
-          setDbStats({ count: count || 0, loading: false });
-          console.log('Current database song count:', count);
-        }
-      } catch (error) {
-        console.error('Error checking database stats:', error);
-        setDbStats({ count: 0, loading: false });
-      }
-    };
-
-    checkDatabaseStats();
-  }, []);
-
-  // Populate curated songs to DB whenever you want (no constraint)
-  const handlePopulateSongs = async () => {
-    setIsPopulating(true);
-    try {
-      console.log('Starting song population...');
-
-      // Reset any previous population flags by clearing localStorage
-      localStorage.removeItem('songsPopulated');
-
-      const results = await spotifyDatabaseService.addCuratedSongsToDatabase();
-      console.log('Song population results:', results);
-
-      if (results?.added > 0) {
-        toast({
-          title: "🎵 Music Library Updated",
-          description: `Added ${results.added} new songs to your collection!`,
-        });
-
-        // Update stats
-        setDbStats(prev => ({ ...prev, count: prev.count + results.added }));
-      } else if (results?.errors > 0) {
-        toast({
-          title: "⚠️ Database Update Issues",
-          description: `Encountered ${results.errors} errors while adding songs. Check console for details.`,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "No New Songs Added",
-          description: "No new songs were added to your library.",
-        });
-      }
-    } catch (error) {
-      console.error('Failed to populate songs:', error);
-      toast({
-        title: "❌ Database Update Failed",
-        description: "Failed to update music library. Check console for details.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsPopulating(false);
-    }
-  };
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
@@ -101,36 +34,26 @@ const Index = () => {
         <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-gradient-to-br from-pink-300/30 to-purple-300/30 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-br from-blue-200/20 to-indigo-200/20 rounded-full blur-2xl"></div>
       </div>
-
       <main className="relative z-10 container mx-auto px-4 py-8 flex flex-col items-center justify-center min-h-screen">
         {/* Header Section */}
-        <div className="text-center mb-12 space-y-4">
-          <div className="flex items-center justify-center gap-3 mb-4">
+        <div className="text-center mb-12 space-y-2 sm:space-y-4">
+          <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 mb-2 sm:mb-4">
             <div className="relative">
-              <Music className="h-12 w-12 text-purple-600 animate-pulse" />
+              <Music className="h-12 w-12 text-gradient animate-pulse" style={{
+                background: "linear-gradient(90deg,#a855f7 0%,#ec4899 45%,#3b82f6 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent"
+              }} />
               <Heart className="h-6 w-6 text-pink-500 absolute -top-2 -right-2 animate-bounce" />
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
+            <h1 className="text-5xl sm:text-6xl font-extrabold bg-gradient-to-r from-purple-700 via-pink-500 to-blue-700 text-transparent bg-clip-text leading-tight tracking-wide drop-shadow-lg hover:scale-105 transform transition">
               Mood Melody
             </h1>
           </div>
-
-          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-md sm:text-lg md:text-xl text-neutral-600 max-w-xl mx-auto leading-relaxed mt-2">
             Discover music that perfectly matches your current vibe. Set your mood and let AI curate the perfect playlist for you.
           </p>
-
-          {/* Database Stats */}
-          <div className="flex items-center justify-center gap-4 text-sm text-gray-500">
-            <span>🎵 {dbStats.count} songs in library</span>
-            {isPopulating && (
-              <div className="flex items-center gap-2 text-purple-600 bg-purple-50 rounded-full px-3 py-1">
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-600"></div>
-                <span>Updating library...</span>
-              </div>
-            )}
-          </div>
         </div>
-
         {/* Main Card */}
         <Card className="w-full max-w-2xl bg-white/80 backdrop-blur-lg border-0 shadow-2xl rounded-3xl overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-8">
@@ -142,7 +65,6 @@ const Index = () => {
               Tell us how you're feeling and we'll find the perfect songs for you
             </p>
           </CardHeader>
-
           <CardContent className="p-8 space-y-8">
             <EnhancedMoodSelector
               moodInputs={moodInputs}
@@ -154,7 +76,6 @@ const Index = () => {
                 setIncludeHindi(hin);
               }}
             />
-
             <Button
               onClick={() => {
                 setLoading(true);
@@ -169,7 +90,7 @@ const Index = () => {
                   });
                 }, 800);
               }}
-              disabled={loading || isPopulating}
+              disabled={loading}
               className="w-full mt-8 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 text-white font-bold py-4 px-8 text-lg rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
             >
               {loading ? (
@@ -185,28 +106,8 @@ const Index = () => {
                 </div>
               )}
             </Button>
-
-            {/* Add button to trigger population manually */}
-            <Button
-              onClick={handlePopulateSongs}
-              disabled={isPopulating}
-              className="w-full mt-4 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white font-bold py-3 px-8 text-base rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-            >
-              {isPopulating ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Updating Library...</span>
-                </div>
-              ) : (
-                <span>Update Song Database</span>
-              )}
-            </Button>
           </CardContent>
         </Card>
-
-        {/* Render the seeding component temporarily */}
-        {/* <SeedSongs /> */}
-
         {/* Footer */}
         <div className="mt-12 text-center space-y-2 opacity-70">
           <p className="text-sm text-gray-500">
